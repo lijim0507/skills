@@ -1,0 +1,8 @@
+{
+  "name": "skill-demo",
+  "version": "1.0.0",
+  "description": "分析 PDF 内容并生成结构化 Markdown 摘要",
+  "tags": ["pdf", "summary", "document"],
+  "category": "document",
+  "author": "lijingyuan"
+}
