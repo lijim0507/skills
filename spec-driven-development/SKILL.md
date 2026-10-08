@@ -30,8 +30,7 @@ SDD/
 ├── 02-plan.md              技术方案（how）
 │   ├── 02-plan-research.md     Phase 0：消化所有 [NEEDS CLARIFICATION]
 │   ├── 02-plan-data-model.md   Phase 1：实体、状态迁移
-│   ├── 02-plan-contracts.md    Phase 1：接口契约
-│   └── 02-plan-quickstart.md   Phase 1：验证场景
+│   └── 02-plan-contracts.md    Phase 1：接口契约
 ├── 03-tasks.md             任务 + 变更轮段 + Convergence 段
 └── 04-converge.md          收敛报告 + 变更轮处置记录
 ```

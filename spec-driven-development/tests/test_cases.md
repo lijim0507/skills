@@ -59,3 +59,4 @@
 - [ ] `SKILL.md` 的落点表与 `references/landing.md` 一致
 - [ ] 重走范围表与 `references/quality-mechanisms.md` 的「变更轮要跑哪几道」一致
 - [ ] `references/doc-set.md` 的职责边界与 `01-spec.md` 模板的抬头提示一致
+- [ ] `references/doc-set.md` 一览里的每份文档都有消费者或检查机制（无孤儿文档）

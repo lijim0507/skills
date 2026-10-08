@@ -11,11 +11,12 @@
 - **补齐异常路径**：门 reject 退回上游、converge 发现数必须严格递减、blocked 显式标记
 - **补齐范围裁剪**：FR 编号不重用，走门 1
 - **补齐起步流程**：绿地建项 / 棕地回溯（偏差进「待办与偏差登记」，逐条确认偏差）
+- **去掉 `02-plan-quickstart.md`**：它把「项目级运行说明」与「`01-spec.md` 验收场景的复述」装在一起，且没有任何检查机制消费它；残留的「怎么触发与观察」并入 `02-plan.md` 的验证手段表，并挂上门 2 检查
 
 ### Added
 
 - 三个校验脚本：`check_spec.py`、`check_intake.py`、`check_tasks.py`
-- `references/` 五份规则文档 + 六份文档模板
+- `references/` 五份规则文档 + 八份文档模板
 - `examples/change-round.md`
 
 ## 1.0.0 - 2026-09-30

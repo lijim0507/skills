@@ -62,7 +62,9 @@ spec-driven-development/
 │       ├── 00-constitution.md
 │       ├── 01-spec.md
 │       ├── 02-plan.md
-│       ├── 02-plan-phases.md
+│       ├── 02-plan-research.md
+│       ├── 02-plan-data-model.md
+│       ├── 02-plan-contracts.md
 │       ├── 03-tasks.md
 │       └── 04-converge.md
 ├── scripts/
