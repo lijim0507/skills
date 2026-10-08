@@ -1,0 +1,5 @@
+# SDD 流程配置
+spec_dir: specs        # 规格文档存放目录（相对仓库根）
+max_tasks: 10          # 单次变更拆解的任务数上限
+require_approval: true # 规格必须经用户确认后才能修改代码
+language: zh           # 规格文档语言：zh=中文, en=英文

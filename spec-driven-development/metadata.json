@@ -1,0 +1,8 @@
+{
+  "name": "spec-driven-development",
+  "version": "1.0.0",
+  "description": "以规范驱动开发流程约束软件变更：先写规格、确认后拆解任务、逐步实施与验收",
+  "tags": ["sdd", "spec", "workflow", "process"],
+  "category": "workflow",
+  "author": "lijingyuan"
+}

@@ -1,0 +1,23 @@
+skill: spec-driven-development
+version: "1.0.0"
+cases:
+  - id: spec-valid
+    input: 校验完整规格 specs/demo/spec.md
+    expect:
+      - 输出包含 "规格校验通过"
+      - 脚本以零退出码结束
+  - id: spec-missing-section
+    input: 校验缺少「非目标」章节的规格
+    expect:
+      - 脚本以非零退出码结束
+      - 输出包含 "缺少必需章节"
+  - id: spec-not-list
+    input: 验收标准章节无列表条目
+    expect:
+      - 脚本以非零退出码结束
+      - 输出包含 "可核对条目"
+  - id: spec-file-missing
+    input: 校验 not-exist.md
+    expect:
+      - 脚本以非零退出码结束
+      - 输出包含 "规格文件不存在"
