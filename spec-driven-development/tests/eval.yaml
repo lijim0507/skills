@@ -1,23 +1,42 @@
 skill: spec-driven-development
-version: "1.0.0"
+version: "2.0.0"
 cases:
   - id: spec-valid
-    input: 校验完整规格 specs/demo/spec.md
+    input: 校验完整规格
     expect:
       - 输出包含 "规格校验通过"
-      - 脚本以零退出码结束
+      - 退出码 0
   - id: spec-missing-section
-    input: 校验缺少「非目标」章节的规格
+    input: 校验缺「成功标准」的规格
     expect:
-      - 脚本以非零退出码结束
+      - 退出码 1
       - 输出包含 "缺少必需章节"
-  - id: spec-not-list
-    input: 验收标准章节无列表条目
+  - id: spec-impl-leak
+    input: 规格正文出现 GPIO21
     expect:
-      - 脚本以非零退出码结束
-      - 输出包含 "可核对条目"
-  - id: spec-file-missing
-    input: 校验 not-exist.md
+      - 输出包含 "spec 里出现实现细节"
+  - id: intake-mismatch
+    input: 落点 spec 但重走范围不含门 1
     expect:
-      - 脚本以非零退出码结束
-      - 输出包含 "规格文件不存在"
+      - 退出码 1
+      - 输出包含 "重走范围却未包含 门 1"
+  - id: intake-missing-field
+    input: 受理单缺「判定依据」
+    expect:
+      - 退出码 1
+      - 输出包含 "受理单缺少"
+  - id: intake-legacy-scope
+    input: 受理单把「同时触及」单开一栏
+    expect:
+      - 退出码 1
+      - 输出包含 "「同时触及」应并入落点行"
+  - id: tasks-voided-ok
+    input: 作废任务带删除线与 ⤷ 说明
+    expect:
+      - 退出码 0
+      - 输出包含 "已作废 1"
+  - id: tasks-voided-bad
+    input: 作废任务无删除线
+    expect:
+      - 退出码 1
+      - 输出包含 "没有删除线"

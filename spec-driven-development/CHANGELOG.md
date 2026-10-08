@@ -1,7 +1,25 @@
 # Changelog
 
-## 1.0.0 - 2026-10-08
+## 2.0.0 - 2026-10-08
+
+### Changed
+
+- **推翻 1.0.0 的设计**：取消小/中/大分级与五态状态机，改为**落点判定**（改动落在哪份文档就重走多远）
+- **拆出 plan 层**：1.0.0 的单一 `spec.md` 违反内容归属判据，现改为 spec（what/why）+ plan（how）+ Phase 0/1 子件
+- **补齐漂移三分类**：需求漂移 / 实现漂移 / 放错位置的漂移，取代 1.0.0 的「回退重审」
+- **补齐受理单格式**：落点（含同时触及）+ 重走范围 + 判定依据 + 处置记录
+- **补齐异常路径**：门 reject 退回上游、converge 发现数必须严格递减、blocked 显式标记
+- **补齐范围裁剪**：FR 编号不重用，走门 1
+- **补齐起步流程**：绿地建项 / 棕地回溯（偏差进「待办与偏差登记」，逐条确认偏差）
 
 ### Added
 
-- 初始版本：SKILL.md、metadata.json、examples、scripts、resources、tests、README
+- 三个校验脚本：`check_spec.py`、`check_intake.py`、`check_tasks.py`
+- `references/` 五份规则文档 + 六份文档模板
+- `examples/change-round.md`
+
+## 1.0.0 - 2026-09-30
+
+### Added
+
+- 初始版本（已被 2.0.0 取代）

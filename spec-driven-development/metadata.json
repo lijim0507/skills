@@ -1,7 +1,7 @@
 {
   "name": "spec-driven-development",
-  "version": "1.0.0",
-  "description": "以规范驱动开发流程约束软件变更：先写规格、确认后拆解任务、逐步实施与验收",
+  "version": "2.0.0",
+  "description": "以规范驱动开发（SDD）约束软件变更：落点判定决定重走范围，评审门与三道质量机制把关，漂移三分类处置不一致",
   "tags": ["sdd", "spec", "workflow", "process"],
   "category": "workflow",
   "author": "lijingyuan"
