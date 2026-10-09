@@ -1,42 +1,235 @@
 skill: spec-driven-development
-version: "2.0.0"
+version: "2.2.0"
+
+# 约定：退出码 0 = 无「错误」（警告与提示不阻断）；退出码 1 = 有「错误」。
+# 围栏（三连反引号）内的内容一律被跳过——示例段不算真内容。
+
 cases:
+  # ---------- check_spec.py ----------
   - id: spec-valid
-    input: 校验完整规格
-    expect:
-      - 输出包含 "规格校验通过"
-      - 退出码 0
+    script: check_spec.py
+    input: 含「用户场景与测试 / 需求 / 成功标准」，2 个用户故事各带验收场景，有 SC-001
+    expect: [退出码 0, 输出包含 "规格校验通过"]
+
+  - id: spec-section-variant
+    script: check_spec.py
+    input: 章节写成「## 功能需求」与「## 成功标准」（无「必需」括注）
+    expect: [退出码 0]
+
   - id: spec-missing-section
-    input: 校验缺「成功标准」的规格
-    expect:
-      - 退出码 1
-      - 输出包含 "缺少必需章节"
+    script: check_spec.py
+    input: 缺「成功标准」章节
+    expect: [退出码 1, 输出包含 "缺少必需章节"]
+
+  - id: spec-scene-missing
+    script: check_spec.py
+    input: 2 个用户故事只有 1 个「验收场景」
+    expect: [退出码 1, 输出包含 "只有 1 个"]
+
   - id: spec-impl-leak
-    input: 规格正文出现 GPIO21
-    expect:
-      - 输出包含 "spec 里出现实现细节"
+    script: check_spec.py
+    input: 正文出现 GPIO21 / uint8_t
+    expect: [退出码 0, 输出包含 "spec 里出现实现细节"]
+
+  - id: spec-impl-leak-other-symbols
+    script: check_spec.py
+    input: 正文出现 PA5 / I2C1 / DMA / 中断优先级
+    expect: [退出码 0, 输出包含 "spec 里出现实现细节"]
+
+  - id: spec-leak-in-checklist-line-ignored
+    script: check_spec.py
+    input: 门 1 清单行与「>」注记行里提到引脚号
+    expect: [退出码 0, 输出不包含 "spec 里出现实现细节"]
+
+  - id: spec-scene-in-wrong-story
+    script: check_spec.py
+    input: 2 个用户故事，2 个「验收场景」块全写在故事 1 名下
+    expect: [退出码 1, 输出包含 "这些用户故事名下没有「验收场景」"]
+
+  - id: spec-impl-leak-exempt-assumptions
+    script: check_spec.py
+    input: 「前提假设」节里写 PA5 与 115200 波特率
+    expect: [退出码 0, 输出不包含 "spec 里出现实现细节"]
+
+  - id: spec-impl-ok-marker
+    script: check_spec.py
+    input: 需求节一行带 <!-- impl-ok --> 标记（含 I2C1），另一行写 PA5 无标记
+    expect: [退出码 0, 输出包含 "spec 里出现实现细节"]
+
+  - id: spec-gate-no-verdict
+    script: check_spec.py
+    input: 有门 1 小节但没有「结论」行
+    expect: [退出码 0, 输出包含 "缺少「结论」行"]
+
+  # ---------- check_intake.py ----------
+  - id: intake-ok
+    script: check_intake.py
+    input: 落点 spec、验收场景 有变化、重走范围含门 1 与门 2，五栏齐全
+    expect: [退出码 0, 输出包含 "受理单校验通过"]
+
+  - id: intake-gate-nospace
+    script: check_intake.py
+    input: 重走范围写成「门1 → plan → 门2 → tasks → converge」
+    expect: [退出码 0]
+
+  - id: intake-round-heading-variant
+    script: check_intake.py
+    input: 变更轮标题写成「## r3 变更轮：…」，且重走范围缺门 1
+    expect: [退出码 1, 输出包含 "重走范围却未包含 门 1"]
+
   - id: intake-mismatch
-    input: 落点 spec 但重走范围不含门 1
-    expect:
-      - 退出码 1
-      - 输出包含 "重走范围却未包含 门 1"
+    script: check_intake.py
+    input: 落点 spec 但重走范围只写「门 2 → tasks → implement」
+    expect: [退出码 1, 输出包含 "重走范围却未包含 门 1"]
+
+  - id: intake-plan-with-gate1
+    script: check_intake.py
+    input: 落点 plan 但重走范围含门 1
+    expect: [退出码 1, 输出包含 "重走范围不应包含 门 1"]
+
+  - id: intake-constitution
+    script: check_intake.py
+    input: 落点 宪法、重走范围含门 1 与门 2、验收场景 有变化
+    expect: [退出码 0]
+
   - id: intake-missing-field
-    input: 受理单缺「判定依据」
-    expect:
-      - 退出码 1
-      - 输出包含 "受理单缺少"
+    script: check_intake.py
+    input: 缺「处置记录」栏（其余四栏齐全）
+    expect: [退出码 1, 输出包含 "受理单缺少"]
+
+  - id: intake-scene-contradiction
+    script: check_intake.py
+    input: 落点「仅实现」但验收场景写「有变化」
+    expect: [退出码 1, 输出包含 "验收场景变了就是 spec 落点"]
+
+  - id: intake-scene-invalid-value
+    script: check_intake.py
+    input: 验收场景栏写「待定」
+    expect: [退出码 1, 输出包含 "只能填「有变化」或「无变化」"]
+
   - id: intake-legacy-scope
-    input: 受理单把「同时触及」单开一栏
-    expect:
-      - 退出码 1
-      - 输出包含 "「同时触及」应并入落点行"
+    script: check_intake.py
+    input: 把「同时触及」单开一栏
+    expect: [退出码 1, 输出包含 "「同时触及」应并入落点行"]
+
+  - id: intake-no-round
+    script: check_intake.py
+    input: 首轮建档的 tasks.md（没有变更轮段）
+    expect: [退出码 0, 输出包含 "首轮建档时正常"]
+
+  - id: intake-clarify-ok
+    script: check_intake.py
+    input: 落点「澄清」、验收场景「无变化」、重走范围「门 1 → analyze」
+    expect: [退出码 0, 输出包含 "受理单校验通过"]
+
+  - id: intake-clarify-scene-changed
+    script: check_intake.py
+    input: 落点「澄清」却写验收场景「有变化」
+    expect: [退出码 1, 输出包含 "澄清的定义就是验收场景不变"]
+
+  - id: intake-clarify-with-gate2
+    script: check_intake.py
+    input: 落点「澄清」、重走范围「门 1 → 门 2 → analyze」
+    expect: [退出码 1, 输出包含 "重走范围不应包含 门 2"]
+
+  - id: intake-fenced-example-ignored
+    script: check_intake.py
+    input: 示例变更轮写在代码围栏内（模板形态）
+    expect: [退出码 0]
+
+  # ---------- check_tasks.py ----------
   - id: tasks-voided-ok
-    input: 作废任务带删除线与 ⤷ 说明
-    expect:
-      - 退出码 0
-      - 输出包含 "已作废 1"
-  - id: tasks-voided-bad
-    input: 作废任务无删除线
-    expect:
-      - 退出码 1
-      - 输出包含 "没有删除线"
+    script: check_tasks.py
+    input: 作废任务带删除线与 ⤷ 说明，任务号留在删除线外
+    expect: [退出码 0, 输出包含 "已作废 1"]
+
+  - id: tasks-voided-no-strike
+    script: check_tasks.py
+    input: 作废任务无删除线、无 ⤷ 行
+    expect: [退出码 1, 输出包含 "没有删除线"]
+
+  - id: tasks-voided-id-struck
+    script: check_tasks.py
+    input: 作废任务把任务号划进删除线（"~~T026 描述 | FR-040/041~~"）
+    expect: [退出码 1, 输出包含 "被划进了删除线"]
+
+  - id: tasks-bullet-variants
+    script: check_tasks.py
+    input: 三行任务分别用 "- [ ]"、"* [ ]"、"  - [ ]" 开头
+    expect: [退出码 0, 输出包含 "未完成 3"]
+
+  - id: tasks-no-trace
+    script: check_tasks.py
+    input: 任务既无 plan 落点也无 FR 编号
+    expect: [退出码 0, 输出包含 "没有 plan 落点或 FR 编号"]
+
+  - id: tasks-fenced-example-ignored
+    script: check_tasks.py
+    input: Convergence 段的示例任务写在代码围栏内
+    expect: [退出码 0, 输出包含 "未完成 0"]
+
+  # ---------- check_landing.py（需要 git 仓库） ----------
+  # ---------- check_gate.py ----------
+  - id: gate-first-round-approved
+    script: check_gate.py
+    input: 01-spec.md 门 1 结论 = approve ｜ 裁决人：张三 ｜ 日期：2026-10-09
+    expect: [退出码 0, 输出包含 "门记录校验通过"]
+
+  - id: gate-first-round-pending
+    script: check_gate.py
+    input: 01-spec.md 门 1 结论 = 待审（模板初始状态）
+    expect: [退出码 1, 输出包含 "仍是「待审」"]
+
+  - id: gate-first-round-missing-approver
+    script: check_gate.py
+    input: 01-spec.md 门 1 结论 = approve，但没有裁决人
+    expect: [退出码 1, 输出包含 "缺「裁决人」"]
+
+  - id: gate-first-round-rejected
+    script: check_gate.py
+    input: 01-spec.md 门 1 结论 = reject
+    expect: [退出码 1, 输出包含 "必须退回上游修"]
+
+  - id: gate-legacy-heading-tolerated
+    script: check_gate.py
+    input: 标题写成 `## 评审门 1（review-spec）`，结论 = approve + 裁决人 + 日期
+    expect: [退出码 0]
+
+  - id: gate-round-missing-record
+    script: check_gate.py
+    input: 受理单重走范围含门 1 与门 2，却只写了门 1 的记录
+    expect: [退出码 1, 输出包含 "却缺门 2 的结论记录"]
+
+  - id: gate-round-ok
+    script: check_gate.py
+    input: 受理单重走范围含门 1，门 1 记录 = approve ｜ 裁决人：张三 ｜ 日期：2026-10-09
+    expect: [退出码 0]
+
+  - id: gate-fenced-example-ignored
+    script: check_gate.py
+    input: 示例门记录写在代码围栏内
+    expect: [退出码 0]
+  - id: landing-head-baseline-hint
+    script: check_landing.py
+    input: 验收场景无变化，--since 用默认 HEAD
+    expect: [退出码 0, 输出包含 "--since <变更前的 commit/tag>"]
+
+  - id: gate-verdict-approve-mentions-reject
+    script: check_gate.py
+    input: 结论 = approve（上一轮 reject 已修复）｜ 裁决人：李工 ｜ 日期：2026-10-09
+    expect: [退出码 0, 输出包含 "门记录校验通过"]
+
+  - id: landing-declared-downstream-but-scene-changed
+    script: check_landing.py
+    input: 与基线相比改了某条验收场景，受理单落点写「仅实现」、验收场景写「无变化」
+    expect: [退出码 1, 输出包含 "验收场景变了就是 spec 落点"]
+
+  - id: landing-consistent
+    script: check_landing.py
+    input: 验收场景确有变化，受理单写「有变化」且落点 spec
+    expect: [退出码 0, 输出包含 "受理单声明一致"]
+
+  - id: landing-no-git
+    script: check_landing.py
+    input: 目标目录不是 git 仓库
+    expect: [退出码 0, 输出包含 "无法与 git 对照"]
