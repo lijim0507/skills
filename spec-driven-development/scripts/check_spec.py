@@ -1,181 +1,177 @@
-"""校验 SDD 规格文档（01-spec.md）的结构。
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""规格结构检查（01-spec.md）。
 
-只做结构检查，不替人判断；退出码 0 = 无「错误」（警告与提示不阻断）。
-「前提假设」节与带 <!-- impl-ok --> 的行不参与实现细节检查——外部给定的硬约束
-本来就允许含具体值（判据见 references/doc-set.md）。
+只查机械事实：章节是否齐全、每条故事是否有验收场景、FR/SC 编号是否连续无重复、
+正文是否泄漏实现细节、门 1 是否留下结论。
+不判断需求写得好不好——那是人的事。
 
-用法：python check_spec.py <01-spec.md>
+用法: python check_spec.py <项目>/SDD/01-spec.md
 """
 
-import argparse
-import os
 import re
 import sys
 
-# 章节名容错：「## 功能需求」也算「需求」
-SECTION_PATTERNS = (
-    ("用户场景与测试", r"^##\s+(?:用户场景与测试|用户场景|场景与测试)"),
-    ("需求", r"^##\s+(?:功能)?需求"),
-    ("成功标准", r"^##\s+成功标准"),
-)
-
-# 实现细节符号：判据见 references/doc-set.md 的「反向检验」一节
-IMPL_LEAK = re.compile(
-    r"\b(?:GPIO|IO|PA|PB|PC|PD|PE|PF|PG)\s?\d+"
-    r"|\b(?:TMR|TIM|ADC|SPI|I2C|I2S|UART|USART|DMA)\d*\b"
-    r"|\b(?:uint|int|bool|char|float|double)\d*_t\b"
-    r"|0x[0-9A-Fa-f]{2,}"
-    r"|引脚|外设通道|时钟树|中断优先级|寄存器|波特率|结构体|函数签名",
-    re.IGNORECASE,
-)
-
-FENCE_MARK = chr(0x60) * 3
-FENCE_RE = re.compile(r"^\s*(?:" + FENCE_MARK + r"|~~~)")
-CHECKBOX_RE = re.compile(r"^\s*[-*]\s+\[[ x~]\]")
-GATE1_RE = re.compile(r"^##\s+门\s*1")
-SECTION_HEAD_RE = re.compile(r"^#{2,4}\s+(.*)$")
-STORY_HEAD_RE = re.compile(r"^###\s+用户故事")
-EXEMPT_SECTIONS = ("前提假设", "Assumptions")
-IMPL_OK_MARK = "<!-- impl-ok -->"
-SCENE_MARK = "**验收场景**"
+FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 
 
-def visible_lines(content):
-    """去掉代码围栏，返回 [(行号, 行内容)]。"""
-    kept = []
+def read_unfenced(path):
+    """读文件，返回 [(行号, 文本)]，跳过围栏代码块（含围栏标记本身）。"""
+    with open(path, encoding='utf-8') as fh:
+        raw = fh.read().splitlines()
+    out = []
     in_fence = False
-    for number, line in enumerate(content.splitlines(), start=1):
-        if FENCE_RE.match(line):
+    for i, ln in enumerate(raw, 1):
+        if FENCE.match(ln):
             in_fence = not in_fence
             continue
         if not in_fence:
-            kept.append((number, line))
-    return kept
+            out.append((i, ln))
+    return out
 
 
-def stories_missing_scenes(lines):
-    """按用户故事分段，返回缺少「验收场景」的故事标题。"""
-    missing = []
-    state = {"title": None, "has_scene": False}
-
-    def close():
-        if state["title"] is not None and not state["has_scene"]:
-            missing.append(state["title"])
-
-    for _, text in lines:
-        story = STORY_HEAD_RE.match(text)
-        if story:
-            close()
-            state["title"] = text[story.end():].strip() or "（未命名）"
-            state["has_scene"] = False
-            continue
-        if state["title"] is None:
-            continue
-        if re.match(r"^#{1,3}\s", text):
-            close()
-            state["title"] = None
-            continue
-        if SCENE_MARK in text:
-            state["has_scene"] = True
-    close()
-    return missing
+def norm(s):
+    return re.sub(r'\s+', '', s)
 
 
-def in_exempt_section(section):
-    return any(section.startswith(name) for name in EXEMPT_SECTIONS)
+def sections(pairs):
+    """按 ## / ### 切分，返回 [{level,title,line,body:[[lineno,text]]}]"""
+    heads = []
+    for idx, (lineno, text) in enumerate(pairs):
+        m = re.match(r'^(#{1,6})\s+(.+?)\s*$', text)
+        if m:
+            heads.append({'level': len(m.group(1)), 'title': m.group(2),
+                          'line': lineno, 'pos': idx})
+    for j, h in enumerate(heads):
+        end = heads[j + 1]['pos'] if j + 1 < len(heads) else len(pairs)
+        h['body'] = pairs[h['pos'] + 1:end]
+    return heads
 
 
-def validate_spec(file_path):
-    """返回 (是否通过, 问题列表)。"""
-    if not file_path:
-        return False, ["错误：未提供规格文件路径"]
-    if not os.path.exists(file_path):
-        return False, ["错误：规格文件不存在 → " + file_path]
-    if not file_path.lower().endswith(".md"):
-        return False, ["错误：规格文件必须是 .md 格式"]
+def find_section(heads, *names):
+    """按归一化标题匹配（完全相等或前缀）。"""
+    wanted = [norm(n) for n in names]
+    for h in heads:
+        t = norm(h['title'])
+        for w in wanted:
+            if t == w or t.startswith(w):
+                return h
+    return None
 
-    with open(file_path, "r", encoding="utf-8") as handle:
-        content = handle.read()
 
-    if not content.strip():
-        return False, ["错误：规格文件为空"]
+def report(tag, errors, warns):
+    for e in errors:
+        print('[ERROR] ' + e)
+    for w in warns:
+        print('[WARN]  ' + w)
+    if errors:
+        print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
+        return 1
+    print('OK   %s（%d 个警告）' % (tag, len(warns)))
+    return 0
 
-    lines = visible_lines(content)
-    body = "\n".join(text for _, text in lines)
-    issues = []
+IMPL = [
+    (re.compile(r'\bGPIO\d+\b'), 'GPIO 引脚号'),
+    (re.compile(r'\bP[ABCD]\d+\b'), 'MCU 引脚名'),
+    (re.compile(r'\b(?:I2C|SPI|UART|USART|ADC|TIM|TMR)\d*\b'), '外设通道名'),
+    (re.compile(r'\b(?:uint|int)\d+_t\b'), '类型名'),
+    (re.compile(r'\bDMA\b'), 'DMA'),
+    (re.compile(r'\bISR\b'), 'ISR'),
+    (re.compile(r'\b0x[0-9A-Fa-f]{2,}\b'), '魔数'),
+]
+REQUIRED = ['用户故事', '功能需求', '成功标准', '门 1', '修订记录']
+RECOMMENDED = ['范围与目标', '边界与异常', '假设与未决项']
 
-    for section, pattern in SECTION_PATTERNS:
-        if not re.search(pattern, body, re.MULTILINE):
-            issues.append("错误：缺少必需章节「" + section + "」")
 
-    stories = re.findall(r"^###\s+用户故事[^\n]*$", body, re.MULTILINE)
-    if not stories:
-        issues.append("错误：没有任何用户故事")
-
-    scenes = re.findall(r"\*\*验收场景\*\*", body)
-    if stories and len(scenes) < len(stories):
-        issues.append("错误：" + str(len(stories)) + " 个用户故事只有 " + str(len(scenes)) + " 个「验收场景」")
-        issues.append("提示：验收场景是判据的锚点，每个用户故事都必须有")
-
-    missing_stories = stories_missing_scenes(lines)
-    if missing_stories:
-        issues.append("错误：这些用户故事名下没有「验收场景」：" + "、".join(missing_stories))
-        issues.append("提示：验收场景必须写在对应故事的小节内，写在别的故事里不算数")
-
-    if not re.search(r"\bSC-\d+", body):
-        issues.append("错误：「成功标准」下没有可测量的条目（SC-xxx）")
-
-    leaks = []
-    section = ""
-    for _, text in lines:
-        head = SECTION_HEAD_RE.match(text)
-        if head:
-            section = head.group(1).strip()
-        if text.lstrip().startswith(">") or CHECKBOX_RE.match(text):
-            continue  # 注记行与门 1 清单行本来就在讲这条判据
-        if in_exempt_section(section) or IMPL_OK_MARK in text:
-            continue  # 前提假设节 / 显式豁免行：硬约束本来就可以含具体值
-        leaks.extend(IMPL_LEAK.findall(text))
-    if leaks:
-        sample = "、".join(sorted(set(leaks))[:5])
-        issues.append("警告：spec 里出现实现细节（" + sample + "）")
-        issues.append("提示：问一句「删掉它，验收还做得成吗」，做得成即应搬去 02-plan.md")
-        issues.append("提示：外部给定的硬约束请写进「前提假设」节，或在该行加 <!-- impl-ok --> 标记")
-
-    gate = GATE1_RE.search(body)
-    if gate:
-        tail = body[gate.end():]
-        verdict = re.search(r"\*\*结论\*\*[:：]\s*(.*)", tail)
-        if not verdict:
-            # 只查「有没有结论行」；结论的语义（是否真的批了）由 check_gate.py 负责
-            issues.append("警告：门 1 小节缺少「结论」行（approve / reject / 待审）")
-
-    open_items = []
-    for _, text in lines:
-        if text.lstrip().startswith(">") or CHECKBOX_RE.match(text):
-            continue
-        open_items.extend(re.findall(r"\[NEEDS CLARIFICATION", text))
-    if open_items:
-        issues.append("提示：仍有 " + str(len(open_items)) + " 处 [NEEDS CLARIFICATION] 未闭合")
-
-    has_error = any(item.startswith("错误") for item in issues)
-    return not has_error, issues
+def check_numbering(nums, label, errors):
+    if not nums:
+        errors.append('%s 一条都没有' % label)
+        return
+    if len(nums) != len(set(nums)):
+        errors.append('%s 有重复编号' % label)
+    missing = [n for n in range(1, max(nums) + 1) if n not in set(nums)]
+    if missing:
+        errors.append('%s 编号断号：缺 %s' % (
+            label, ', '.join('%s-%03d' % (label, n) for n in missing)))
 
 
 def main():
-    if hasattr(sys.stdout, "reconfigure"):
-        sys.stdout.reconfigure(errors="replace")
-    parser = argparse.ArgumentParser(description="SDD 规格文档校验")
-    parser.add_argument("file", help="必填：01-spec.md 路径")
-    args = parser.parse_args()
+    if len(sys.argv) < 2:
+        print(__doc__.strip())
+        return 2
+    path = sys.argv[1]
+    pairs = read_unfenced(path)
+    heads = sections(pairs)
+    errors, warns = [], []
 
-    ok, issues = validate_spec(args.file)
-    for issue in issues:
-        print(issue)
-    if ok:
-        print("规格校验通过")
-    sys.exit(0 if ok else 1)
+    for name in REQUIRED:
+        if find_section(heads, name) is None:
+            errors.append('缺少必需章节：' + name)
+    for name in RECOMMENDED:
+        if find_section(heads, name) is None:
+            warns.append('建议补上章节：' + name)
+
+    stories = [h for h in heads if re.match(r'^US\s*\d+', norm(h['title']))]
+    if not stories:
+        warns.append('没有找到用户故事（标题需形如 ### US1 <标题>）')
+    for st in stories:
+        body = '\n'.join(t for _, t in st['body'])
+        if not re.search(r'\*\*Given\*\*', body, re.I) or not re.search(r'\*\*Then\*\*', body, re.I):
+            errors.append('第 %d 行「%s」没有 Given/When/Then 验收场景' % (st['line'], st['title']))
+
+    fr = []
+    sec = find_section(heads, '功能需求')
+    if sec:
+        for _, t in sec['body']:
+            m = re.match(r'^\s*[-*]?\s*\*\*(FR-\d{3})\*\*', t)
+            if m:
+                fr.append(int(m.group(1).split('-')[1]))
+    check_numbering(fr, 'FR', errors)
+
+    sc = []
+    sec = find_section(heads, '成功标准')
+    if sec:
+        for _, t in sec['body']:
+            m = re.match(r'^\s*[-*]?\s*\*\*(SC-\d{3})\*\*', t)
+            if m:
+                sc.append(int(m.group(1).split('-')[1]))
+    check_numbering(sc, 'SC', errors)
+
+    leaks = []
+    for lineno, t in pairs:
+        if t.lstrip().startswith(('-', '*', '>', '|')):
+            continue
+        for pat, label in IMPL:
+            if pat.search(t):
+                leaks.append('第 %d 行出现%s：%s' % (lineno, label, t.strip()[:60]))
+                break
+    for item in leaks[:5]:
+        warns.append('疑似实现细节泄漏——' + item)
+    if len(leaks) > 5:
+        warns.append('疑似实现细节泄漏还有 %d 处' % (len(leaks) - 5))
+
+    gate = find_section(heads, '门 1')
+    if gate is None:
+        pass
+    else:
+        concl = [t for _, t in gate['body'] if '结论' in t]
+        if not concl:
+            errors.append('门 1 小节里没有结论行')
+        else:
+            text = ' '.join(concl)
+            if re.search(r'<[^>]*>', text):
+                errors.append('门 1 结论仍是占位符：' + text.strip()[:60])
+            elif 'reject' in text.lower():
+                errors.append('门 1 结论是 reject，必须退回上游修完重跑')
+            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text:
+                pass
+            elif '待审' in text or '未审' in text:
+                warns.append('门 1 结论仍是待审（尚未获得批准）')
+            else:
+                errors.append('门 1 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… 或 待审')
+
+    return report('check_spec ' + path, errors, warns)
 
 
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    sys.exit(main())

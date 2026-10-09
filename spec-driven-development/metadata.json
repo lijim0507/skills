@@ -1,8 +1,0 @@
-{
-  "name": "spec-driven-development",
-  "version": "2.2.0",
-  "description": "以规范驱动开发（SDD）约束软件变更：一个判据决定落点与重走范围，人审门与机器守卫两类关卡把关，声明都挂可核对的证据",
-  "tags": ["sdd", "spec", "workflow", "process"],
-  "category": "workflow",
-  "author": "lijingyuan"
-}
