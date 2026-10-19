@@ -3,7 +3,7 @@
 """规格结构检查（01-spec.md）。
 
 只查机械事实：章节是否齐全、每条故事是否有验收场景、FR/SC 编号是否连续无重复、
-门 1 是否留下结论。实现细节与外部契约的边界按领域判断，见 references/domains.md。
+门 1 是否留下结论。外部契约节可选，内容由门 1 人工判断；领域边界见 references/domains.md。
 不判断需求写得好不好——那是人的事。
 
 用法: python check_spec.py <项目>/SDD/01-spec.md
