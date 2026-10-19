@@ -3,7 +3,7 @@
 """规格结构检查（01-spec.md）。
 
 只查机械事实：章节是否齐全、每条故事是否有验收场景、FR/SC 编号是否连续无重复、
-正文是否泄漏实现细节、门 1 是否留下结论。
+门 1 是否留下结论。实现细节与外部契约的边界按领域判断，见 references/domains.md。
 不判断需求写得好不好——那是人的事。
 
 用法: python check_spec.py <项目>/SDD/01-spec.md
@@ -70,15 +70,6 @@ def report(tag, errors, warns):
     print('OK   %s（%d 个警告）' % (tag, len(warns)))
     return 0
 
-IMPL = [
-    (re.compile(r'\bGPIO\d+\b'), 'GPIO 引脚号'),
-    (re.compile(r'\bP[ABCD]\d+\b'), 'MCU 引脚名'),
-    (re.compile(r'\b(?:I2C|SPI|UART|USART|ADC|TIM|TMR)\d*\b'), '外设通道名'),
-    (re.compile(r'\b(?:uint|int)\d+_t\b'), '类型名'),
-    (re.compile(r'\bDMA\b'), 'DMA'),
-    (re.compile(r'\bISR\b'), 'ISR'),
-    (re.compile(r'\b0x[0-9A-Fa-f]{2,}\b'), '魔数'),
-]
 REQUIRED = ['用户故事', '功能需求', '成功标准', '门 1', '修订记录']
 RECOMMENDED = ['范围与目标', '边界与异常', '假设与未决项']
 
@@ -136,19 +127,6 @@ def main():
             if m:
                 sc.append(int(m.group(1).split('-')[1]))
     check_numbering(sc, 'SC', errors)
-
-    leaks = []
-    for lineno, t in pairs:
-        if t.lstrip().startswith(('-', '*', '>', '|')):
-            continue
-        for pat, label in IMPL:
-            if pat.search(t):
-                leaks.append('第 %d 行出现%s：%s' % (lineno, label, t.strip()[:60]))
-                break
-    for item in leaks[:5]:
-        warns.append('疑似实现细节泄漏——' + item)
-    if len(leaks) > 5:
-        warns.append('疑似实现细节泄漏还有 %d 处' % (len(leaks) - 5))
 
     gate = find_section(heads, '门 1')
     if gate is None:
