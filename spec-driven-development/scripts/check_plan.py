@@ -54,11 +54,16 @@ def sections(pairs):
 
 
 def find_section(heads, *names):
+    """按归一化标题匹配：先精确匹配，再前缀匹配。"""
     wanted = [norm(n) for n in names]
     for h in heads:
-        t = norm(h['title'])
-        if any(t == w or t.startswith(w) for w in wanted):
+        if norm(h['title']) in wanted:
             return h
+    for h in heads:
+        t = norm(h['title'])
+        for w in wanted:
+            if t.startswith(w):
+                return h
     return None
 
 

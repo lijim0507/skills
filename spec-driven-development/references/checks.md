@@ -41,7 +41,7 @@
 在**技能目录**里，不在目标项目里。只要 Python 3 标准库。
 
 ```bash
-python <技能目录>/scripts/check_spec.py  <项目>/SDD/01-spec.md    # 规格结构与编号
+python <技能目录>/scripts/check_spec.py  <项目>/SDD/01-spec.md    # 规格结构与编号（结构见 demo）
 python <技能目录>/scripts/check_tasks.py <项目>/SDD/03-tasks.md    # 任务、任务卡与开工前检查
 python <技能目录>/scripts/check_chain.py <项目>/SDD                # 故事 → FR → 任务，查断链
 python <技能目录>/scripts/check_plan.py  <项目>/SDD                # 模块划分、契约引用、依赖环
@@ -49,7 +49,7 @@ python <技能目录>/scripts/check_plan.py  <项目>/SDD                # 模�
 
 | 脚本               | 保证什么                                                                                       |
 | ------------------ | ---------------------------------------------------------------------------------------------- |
-| `check_spec.py`  | 章节齐全；每条故事有验收场景；FR / SC 编号连续无重复；门 1 结论行                              |
+| `check_spec.py`  | spec 结构、编号与门 1 结论；具体结构见 `examples/todo-cli/SDD/01-spec.md` |
 | `check_tasks.py` | 任务行格式与编号；任务状态统计；每条任务挂 FR 或显式标`| 流程`；任务卡字段（执行者 / 目标 / 范围 / 输入 / 产出 / DoD / 验证 / 依赖）；开工前检查的勾选统计 |
 | `check_chain.py` | 跨文档链条不断：每条 FR 都挂在故事下、都有任务覆盖；任务引用的 FR 真实存在；各文档有修订记录节 |
 | `check_plan.py`  | `02-plan.md` 有模块划分；`02-plan-contracts.md` 可选（有则查模块清单/依赖方向/契约、引用与依赖环）；技术总监关键节是否齐全 |
