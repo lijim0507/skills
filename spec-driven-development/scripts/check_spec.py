@@ -71,7 +71,7 @@ def report(tag, errors, warns):
     return 0
 
 REQUIRED = ['用户故事', '功能需求', '成功标准', '门 1', '修订记录']
-RECOMMENDED = ['范围与目标', '边界与异常', '假设与未决项']
+RECOMMENDED = ['范围与目标', '目标消费者', '非目标', '边界与异常', '假设与未决项', '交接给技术总监']
 
 
 def check_numbering(nums, label, errors):

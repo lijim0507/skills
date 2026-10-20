@@ -3,7 +3,10 @@
 """任务检查（03-tasks.md）。
 
 只查机械事实：章节是否齐全、任务行格式与编号、每条任务是否挂了 FR 或标了「流程」、
-任务状态统计、开工前检查的勾选统计。
+任务状态统计、任务卡字段、开工前检查的勾选统计。
+
+任务卡是给执行者的工单；简单任务可以只用索引行，非平凡任务应有卡。
+卡里缺「目标 / 范围 / 输入 / 产出 / 完成判据 / 验证 / 依赖」会报错。
 
 用法: python check_tasks.py <项目>/SDD/03-tasks.md
 """
@@ -71,8 +74,44 @@ def report(tag, errors, warns):
 
 TASK = re.compile(r'^\s*[-*]\s+\[([ xX~])\]\s*T(\d{3})\b')
 CHK = re.compile(r'^\s*[-*]\s+\[([ xX])\]\s*CHK(\d{3})\b')
+CARD = re.compile(r'^T(\d{3})\b')
+CARD_REQUIRED = [
+    ('执行者', '执行者'),
+    ('目标', '目标'),
+    ('范围', '范围'),
+    ('输入', '输入'),
+    ('产出', '产出'),
+    ('完成判据（DoD）', '完成判据'),
+    ('验证', '验证'),
+    ('依赖', '依赖'),
+]
 REQUIRED = ['任务', '覆盖映射', '开工前检查', '修订记录']
-RECOMMENDED = ['analyze 交叉检查', '收敛追加']
+RECOMMENDED = ['任务分配说明', '执行批次', '任务卡', 'analyze 交叉检查', '收敛追加']
+
+
+def collect_cards(heads, errors):
+    """返回 {任务号: [卡正文行]}；没有「任务卡」节返回 None。"""
+    sec = find_section(heads, '任务卡')
+    if sec is None:
+        return None
+    cards = {}
+    start = heads.index(sec)
+    current = None
+    for h in heads[start + 1:]:
+        if h['level'] <= 2:
+            break
+        if h['level'] == 3:
+            m = CARD.match(h['title'])
+            if m:
+                current = int(m.group(1))
+                if current in cards:
+                    errors.append('任务卡 T%03d 重复' % current)
+                cards.setdefault(current, []).extend(t for _, t in h['body'])
+            else:
+                current = None
+        elif current is not None:
+            cards[current].extend(t for _, t in h['body'])
+    return cards
 
 
 def main():
@@ -91,7 +130,7 @@ def main():
         if find_section(heads, name) is None:
             warns.append('建议补上章节：' + name)
 
-    nums, done, todo, void, unnamed = [], [], [], [], []
+    nums, done, todo, void, unnamed, flow = [], [], [], [], [], set()
     for lineno, t in pairs:
         m = TASK.match(t)
         if not m:
@@ -105,6 +144,8 @@ def main():
         else:
             todo.append(num)
         line_norm = norm(t)
+        if '|流程' in line_norm:
+            flow.add(num)
         if not re.search(r'FR-\d{3}', t) and '|流程' not in line_norm:
             unnamed.append('第 %d 行 T%03d 既没挂 FR 也没标 | 流程' % (lineno, num))
 
@@ -118,23 +159,51 @@ def main():
     if len(unnamed) > 5:
         errors.append('还有 %d 条任务没挂 FR / 流程标记' % (len(unnamed) - 5))
 
+    cards = collect_cards(heads, errors)
+    card_count = 0
+    if cards is None:
+        warns.append('没有「任务卡」节：简单任务可只用清单；非平凡任务应补任务卡，否则不可独立分配')
+    else:
+        card_count = len(cards)
+        for num in sorted(set(cards) - set(nums)):
+            errors.append('任务卡 T%03d 没有对应的任务索引行' % num)
+        for num in nums:
+            if num not in cards:
+                if num not in flow and num not in void:
+                    warns.append('任务 T%03d 没有任务卡（简单任务可只用索引；非平凡任务应补卡）' % num)
+                continue
+            body = '\n'.join(cards[num])
+            for label, key in CARD_REQUIRED:
+                if key not in body:
+                    errors.append('任务卡 T%03d 缺少「%s」' % (num, label))
+        if card_count == 0:
+            warns.append('「任务卡」节里没有任务卡')
+
     chk_total, chk_checked = 0, 0
+    chk_lines = []
     for _, t in pairs:
         m = CHK.match(t)
         if not m:
             continue
         chk_total += 1
+        chk_lines.append(t)
         if m.group(1) in 'xX':
             chk_checked += 1
     if chk_total == 0:
         warns.append('没有找到开工前检查项（格式必须是 - [ ] CHK001 …）')
-    elif chk_checked < chk_total:
-        warns.append('开工前检查未全勾：Checked %d / Total %d —— implement 前必须停下询问'
-                     % (chk_checked, chk_total))
+    else:
+        if chk_checked < chk_total:
+            warns.append('开工前检查未全勾：Checked %d / Total %d —— implement 前必须停下询问'
+                         % (chk_checked, chk_total))
+        chk_text = '\n'.join(chk_lines)
+        for keyword in ('任务卡', '完成判据', '可独立分配'):
+            if keyword not in chk_text:
+                warns.append('开工前检查建议包含「%s」相关项' % keyword)
 
     print('任务：共 %d ｜ 未完成 %d ｜ 已完成 %d ｜ 已作废 %d'
           % (len(nums), len(todo), len(done), len(void)))
-    print('开工前检查：Checked %d / Total %d' % (chk_checked, chk_total))
+    print('任务卡：%d ｜ 开工前检查：Checked %d / Total %d'
+          % (card_count, chk_checked, chk_total))
     return report('check_tasks ' + path, errors, warns)
 
 
