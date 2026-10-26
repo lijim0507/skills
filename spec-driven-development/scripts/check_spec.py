@@ -16,6 +16,7 @@
 
 import re
 import sys
+import lint_common
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 POS_REF = re.compile(r'\*\*(?:定位|对应根)\*\*[:：]\s*(.+)')
@@ -80,7 +81,8 @@ def report(tag, errors, warns):
     if errors:
         print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
         return 1
-    print('OK   %s（%d 个警告）' % (tag, len(warns)))
+    print('结构检查通过 · 语义未验证  %s（%d 个警告）' % (tag, len(warns)))
+    print('未覆盖：模板符合度、角色边界、可验收性、可行性')
     return 0
 
 
@@ -329,7 +331,7 @@ def main():
 
     roots = parse_positioning(heads, errors, warns)
     stories = parse_stories(heads, roots, errors)
-    parse_frs(heads, stories, errors, warns)
+    fr_defs = parse_frs(heads, stories, errors, warns)
 
     for rid, info in roots.items():
         if info['kind'] != '不服务' and not info['stories']:
@@ -353,6 +355,15 @@ def main():
             else:
                 errors.append('门 1 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… 或 待审')
 
+    raw = open(path, encoding='utf-8').read()
+    for ln, msg in lint_common.placeholder_issues(raw):
+        errors.append('第 %d 行：%s' % (ln, msg))
+    for m in re.finditer(r'FR-(\d{3})', raw):
+        if int(m.group(1)) not in fr_defs:
+            errors.append('正文引用了不存在的 FR-%s' % m.group(1))
+    if not lint_common.has_role_header(raw, '产品经理'):
+        errors.append('缺少文档头：> 角色：产品经理 ｜ 依据：…')
+    warns.extend(lint_common.heading_order_warnings(raw, ['产品定位', '用户故事', '功能需求', '未决项', '门 1', '交接给技术总监', '修订记录']))
     return report('check_spec ' + path, errors, warns)
 
 

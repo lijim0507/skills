@@ -69,7 +69,8 @@ def report(tag, errors, warns):
     if errors:
         print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
         return 1
-    print('OK   %s（%d 个警告）' % (tag, len(warns)))
+    print('结构检查通过 · 语义未验证  %s（%d 个警告）' % (tag, len(warns)))
+    print('未覆盖：模板符合度、角色边界、可验收性、可行性')
     return 0
 
 import os

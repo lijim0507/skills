@@ -13,6 +13,7 @@
 
 import re
 import sys
+import lint_common
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 
@@ -72,7 +73,8 @@ def report(tag, errors, warns):
     if errors:
         print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
         return 1
-    print('OK   %s（%d 个警告）' % (tag, len(warns)))
+    print('结构检查通过 · 语义未验证  %s（%d 个警告）' % (tag, len(warns)))
+    print('未覆盖：模板符合度、角色边界、可验收性、可行性')
     return 0
 
 TASK = re.compile(r'^\s*[-*]\s+\[([ xX~])\]\s*T(\d{3})\b')
@@ -207,6 +209,14 @@ def main():
           % (len(nums), len(todo), len(done), len(void)))
     print('任务卡：%d ｜ 开工前检查：Checked %d / Total %d'
           % (card_count, chk_checked, chk_total))
+    raw = open(path, encoding='utf-8').read()
+    for ln, msg in lint_common.placeholder_issues(raw):
+        errors.append('第 %d 行：%s' % (ln, msg))
+    if not lint_common.has_role_header(raw, '任务负责人'):
+        errors.append('缺少文档头：> 角色：任务负责人 ｜ 依据：…')
+    warns.extend(lint_common.heading_order_warnings(raw, ['任务分配说明', '执行批次', '任务', '任务卡', '覆盖映射', 'analyze 交叉检查', '开工前检查', '收敛追加', '修订记录']))
+    for ln, msg in lint_common.empty_field_issues(raw):
+        errors.append('第 %d 行：任务卡%s' % (ln, msg))
     return report('check_tasks ' + path, errors, warns)
 
 

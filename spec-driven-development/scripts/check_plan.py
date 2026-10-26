@@ -11,6 +11,7 @@
 import os
 import re
 import sys
+import lint_common
 
 FENCE = re.compile(r'^\s*(?:' + (chr(96) * 3) + r'|~~~)')
 # 仅用于提示，不参与错误判定；模块语义由门 2 判断。
@@ -75,7 +76,8 @@ def report(tag, errors, warns):
     if errors:
         print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
         return 1
-    print('OK   %s（%d 个警告）' % (tag, len(warns)))
+    print('结构检查通过 · 语义未验证  %s（%d 个警告）' % (tag, len(warns)))
+    print('未覆盖：模板符合度、角色边界、可验收性、可行性')
     return 0
 
 
@@ -167,6 +169,7 @@ def main():
     if not os.path.isfile(plan_path):
         errors.append('找不到 02-plan.md')
         return report('check_plan ' + base, errors, warns)
+
     if not os.path.isfile(contracts_path):
         warns.append('没有 02-plan-contracts.md；如果本次没有内部契约，请在 02-plan.md 写明「无内部契约」')
 
@@ -336,6 +339,12 @@ def main():
             warns.append('「模块间契约」没有找到 A → B / A ↔ B 形式的契约')
 
     print('模块：%d ｜ 契约：%d' % (len(modules), len(contracts)))
+    raw = open(plan_path, encoding='utf-8').read()
+    for ln, msg in lint_common.placeholder_issues(raw):
+        errors.append('第 %d 行：%s' % (ln, msg))
+    if not lint_common.has_role_header(raw, '技术总监'):
+        errors.append('缺少文档头：> 角色：技术总监 ｜ 依据：…')
+    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '需求可行性核对', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '风险与应对', '交付', '验证手段', '宪法检查', '门 2', '交接给任务拆解', '修订记录']))
     return report('check_plan ' + base, errors, warns)
 
 

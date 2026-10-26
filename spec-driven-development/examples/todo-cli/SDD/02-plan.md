@@ -1,5 +1,13 @@
 # 02-plan.md —— Todo CLI 技术方案
 
+> 角色：技术总监 ｜ 依据：01-spec.md
+
+## 接手复述
+
+- 我拿到的产品决定：P1 开发者在终端 3 秒内记录待办；P2 按顺序查看；对外契约是 CLI 命令与输出格式。
+- 据此要做的方案：单进程 Python CLI，CommandParser / TaskStore / TaskRenderer，JSON 文件存储。
+- 还缺的信息：无。
+
 ## 方案总览
 
 单进程 Python CLI，CommandParser 解析参数，TaskStore 负责 JSON 文件读写，TaskRenderer 负责输出。
