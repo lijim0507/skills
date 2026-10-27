@@ -3,9 +3,9 @@ name: "spec-driven-development"
 description: "用规范驱动开发（SDD）约束会改动代码的工作：产品经理决定做什么，技术总监决定怎么做，任务负责人决定按什么顺序、由谁来做。先改文档再改代码，需求 / 方案 / 验收由人裁决。用于新增功能、修改行为、修缺陷、重构、契约变更，以及项目第一次铺文档集；不适用于纯问答、只读任务和不改动任何外部可观察行为的小改。"
 metadata:
   displayName: "规范驱动开发"
-  updatedAt: "2026-10-26T00:00:00.000Z"
+  updatedAt: "2026-10-27T00:00:00.000Z"
   author: lijingyuan
-  version: "1.7.3"
+  version: "1.8.0"
   short-description: "用规格约束代码变更"
   tags: [sdd, spec, workflow]
 ---
@@ -81,10 +81,12 @@ SDD/
 ├── 02-plan.md               可行性 / 模块 / 决策 / 风险 / 验证 / 门 2
 ├── 02-plan-research.md      决策与备选
 ├── 02-plan-data-model.md    实体 / 状态 / 写权限
-├── 02-plan-contracts.md     模块清单 / 依赖 / 契约
+├── 02-plan-contracts.md     模块清单 / 依赖 / 公开接口
 ├── 03-tasks.md              批次 / 任务卡 / 映射 / 检查
 └── 04-converge.md           收敛结论与验收记录
 ```
+
+契约按模块聚合：一个模块只写一次公开接口，不按调用方拆；依赖只画方向。
 
 ## 轻量使用
 

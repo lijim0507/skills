@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """方案结构检查（02-plan.md / 02-plan-contracts.md）。
 
-只查机械事实：模块划分节、模块清单、依赖方向、契约引用和依赖环。
+只查机械事实：模块划分节、模块清单、依赖方向、公开接口节引用和依赖环。
 层名/角色名只做提示，不判语义；模块粒度好不好由门 2 判断。
 
 用法: python check_plan.py <项目>/SDD
@@ -193,15 +193,16 @@ def main():
             idx_module = col_index(header, '模块')
             idx_duty = col_index(header, '职责')
             idx_tables = col_index(header, '拥有', '表')
+            if idx_tables is None:
+                idx_tables = col_index(header, '拥有', '数据')
             idx_deps = col_index(header, '依赖')
             idx_write = col_index(header, '写权限')
             idx_layer = col_index(header, '层')
             if idx_layer is None:
                 idx_layer = col_index(header, '分类')
             required = [
-                ('层 / 分类', idx_layer),
                 ('模块', idx_module), ('职责', idx_duty),
-                ('拥有或读写的表', idx_tables), ('依赖', idx_deps),
+                ('拥有或读写的数据', idx_tables), ('依赖', idx_deps),
                 ('写权限', idx_write),
             ]
             for label, idx in required:
@@ -276,9 +277,12 @@ def main():
     if contracts_exists:
         contracts_pairs = read_unfenced(contracts_path)
         contracts_heads = sections(contracts_pairs)
-        for name in ('模块清单', '依赖方向', '模块间契约'):
-            if find_section(contracts_heads, name) is None:
-                errors.append('02-plan-contracts.md 缺少「%s」节' % name)
+        if find_section(contracts_heads, '模块清单') is None:
+            errors.append('02-plan-contracts.md 缺少「模块清单」节')
+        if find_section(contracts_heads, '依赖方向') is None:
+            errors.append('02-plan-contracts.md 缺少「依赖方向」节')
+        if find_section(contracts_heads, '模块公开接口') is None and find_section(contracts_heads, '模块间契约') is None:
+            errors.append('02-plan-contracts.md 缺少「模块公开接口」节')
 
     contract_modules = set()
     list_sec = find_section(contracts_heads, '模块清单')
@@ -308,10 +312,49 @@ def main():
                 if not contract_modules:
                     errors.append('「模块清单」没有有效模块行')
 
-    contract_sec = find_section(contracts_heads, '模块间契约')
+    interface_sec = find_section(contracts_heads, '模块公开接口')
+    legacy_sec = find_section(contracts_heads, '模块间契约')
+    interface_modules = []
     contracts = []
-    if contract_sec is not None:
-        start = contracts_heads.index(contract_sec)
+
+    if interface_sec is not None:
+        if legacy_sec is not None:
+            warns.append('同时存在「模块间契约」旧节；迁移到「模块公开接口」后删除，避免同一接口写两处')
+        start = contracts_heads.index(interface_sec)
+        for h in contracts_heads[start + 1:]:
+            if h['level'] <= 2:
+                break
+            if h['level'] != 3:
+                continue
+            name = clean_cell(h['title'])
+            interface_modules.append(name)
+            if re.search(r'↔|→|->', name):
+                errors.append('第 %d 行接口节按调用对命名（%s）；请改成单个模块名，接口不按调用方拆' % (h['line'], h['title']))
+                continue
+            if is_placeholder(name):
+                warns.append('第 %d 行接口模块名仍是占位符：%s' % (h['line'], name))
+            else:
+                if is_role_hint(name):
+                    warns.append('第 %d 行接口模块名疑似分层类别或泛指角色，请确认它是具体模块：%s' % (h['line'], name))
+                if name not in modules:
+                    errors.append('第 %d 行接口节引用了不存在的模块：%s' % (h['line'], name))
+                if name not in contract_modules:
+                    errors.append('第 %d 行接口节的 %s 不在「模块清单」中' % (h['line'], name))
+            body_text = chr(10).join(t for _, t in h['body'])
+            if not any(k in body_text for k in ('公开类型', '公开接口', '事件与回调', '无公开接口')):
+                warns.append('第 %d 行 %s 的公开接口小节没有「公开类型 / 公开接口 / 事件与回调 / 无公开接口」内容' % (h['line'], name))
+        seen = set()
+        for name in interface_modules:
+            if name in seen:
+                errors.append('模块公开接口节重复：%s' % name)
+            seen.add(name)
+        for name in sorted(contract_modules - seen):
+            errors.append('模块清单里的 %s 没有「模块公开接口」小节' % name)
+        if not interface_modules and '无内部契约' not in chr(10).join(t for _, t in interface_sec['body']):
+            warns.append('「模块公开接口」没有找到模块小节')
+    elif legacy_sec is not None:
+        warns.append('使用旧版「模块间契约」按依赖对列举；建议迁移为「模块公开接口」，每个模块只写一次')
+        start = contracts_heads.index(legacy_sec)
         for h in contracts_heads[start + 1:]:
             if h['level'] <= 2:
                 break
@@ -335,10 +378,13 @@ def main():
                         errors.append('第 %d 行契约两端是同一个模块：%s' % (h['line'], a))
                 else:
                     warns.append('第 %d 行契约标题无法解析模块对：%s' % (h['line'], h['title']))
-        if not contracts and '无内部契约' not in '\n'.join(t for _, t in contract_sec['body']):
+        if not contracts and '无内部契约' not in chr(10).join(t for _, t in legacy_sec['body']):
             warns.append('「模块间契约」没有找到 A → B / A ↔ B 形式的契约')
 
-    print('模块：%d ｜ 契约：%d' % (len(modules), len(contracts)))
+    if interface_sec is not None:
+        print('模块：%d ｜ 公开接口节：%d' % (len(modules), len(interface_modules)))
+    else:
+        print('模块：%d ｜ 契约：%d' % (len(modules), len(contracts)))
     raw = open(plan_path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
         errors.append('第 %d 行：%s' % (ln, msg))
