@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """技能体积与链接检查。
 
-预算：SKILL.md <= 8 KB；roles/*.md <= 2 KB；references/*.md <= 4 KB（_archive 不计）。
+预算：SKILL.md <= 8 KB；roles/*.md <= 3 KB；references/*.md <= 5 KB（_archive 不计）。
 另外检查 SKILL.md 里引用的路径是否存在。
 
 用法: python check_skill.py [技能目录]
@@ -14,10 +14,11 @@ import sys
 
 BUDGETS = [
     ('SKILL.md', 8 * 1024, '入口'),
-    ('roles', 2 * 1024, '角色页'),
-    ('references', 4 * 1024, '参考页'),
+    ('roles', 3 * 1024, '角色页'),
+    ('references', 5 * 1024, '参考页'),
+    ('workflows', 5 * 1024, '流程页'),
 ]
-LINK = re.compile(r'(?:roles|references|templates|scripts)/[A-Za-z0-9._*/-]+')
+LINK = re.compile(r'(?:roles|references|templates|scripts|workflows)/[A-Za-z0-9._*/-]+')
 
 
 def main():
@@ -59,10 +60,11 @@ def main():
         print('[ERROR] ' + e)
     for w in warns:
         print('[WARN]  ' + w)
-    print('体积：SKILL %d B ｜ roles %d 个 ｜ references %d 个' % (
+    print('体积：SKILL %d B ｜ roles %d 个 ｜ references %d 个 ｜ workflows %d 个' % (
         os.path.getsize(skill),
         len(glob.glob(os.path.join(base, 'roles', '*.md'))),
-        len(glob.glob(os.path.join(base, 'references', '*.md')))))
+        len(glob.glob(os.path.join(base, 'references', '*.md'))),
+        len(glob.glob(os.path.join(base, 'workflows', '*.md')))))
     if errors:
         print('FAIL check_skill %s：%d 个错误，%d 个警告' % (base, len(errors), len(warns)))
         return 1

@@ -348,12 +348,12 @@ def main():
                 errors.append('门 1 结论仍是占位符：' + text.strip()[:60])
             elif 'reject' in text.lower():
                 errors.append('门 1 结论是 reject，必须退回上游修完重跑')
-            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text:
+            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text and '版本' in text:
                 pass
             elif '待审' in text or '未审' in text:
                 warns.append('门 1 结论仍是待审（尚未获得批准）')
             else:
-                errors.append('门 1 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… 或 待审')
+                errors.append('门 1 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… ｜ 版本：rN 或 待审')
 
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):

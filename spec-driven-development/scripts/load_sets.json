@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "note": "v3 按角色卡登记装载集；max_bytes 为 UTF-8 字节总和，先按实测上浮，再用 check_loadsets 收紧。",
+  "bootstrap": {
+    "description": "入口：任何阶段都要付的底价，只含 SKILL.md。",
+    "scope": "cumulative",
+    "files": ["SKILL.md"],
+    "max_bytes": 9000
+  },
+  "flow.main": {
+    "description": "进入任一阶段后立即加载的流程页。",
+    "scope": "incremental",
+    "files": ["workflows/main-flow.md"],
+    "max_bytes": 6000
+  },
+  "stage.00.adjudicate": {
+    "description": "裁决人看门简报：角色卡 + 门禁 + 角色地图。",
+    "scope": "incremental",
+    "files": ["roles/00-adjudicator.md", "references/gates.md", "references/role-map.md"],
+    "max_bytes": 10000
+  },
+  "stage.01.spec": {
+    "description": "写 01：产品经理角色卡 + 宪法 + 规格模板。",
+    "scope": "incremental",
+    "files": ["roles/01-pm.md", "templates/00-constitution.md", "templates/01-spec.md"],
+    "max_bytes": 12000
+  },
+  "stage.01.gate": {
+    "description": "门 1：门禁 + 裁决人 + 评审者。",
+    "scope": "incremental",
+    "files": ["references/gates.md", "roles/00-adjudicator.md", "roles/05-reviewer.md"],
+    "max_bytes": 9000
+  },
+  "stage.02.plan": {
+    "description": "写 02：技术总监角色卡 + 四个方案模板。",
+    "scope": "incremental",
+    "files": [
+      "roles/02-architect.md",
+      "templates/02-plan.md",
+      "templates/02-plan-contracts.md",
+      "templates/02-plan-data-model.md",
+      "templates/02-plan-research.md"
+    ],
+    "max_bytes": 18000
+  },
+  "stage.02.gate": {
+    "description": "门 2：门禁 + 裁决人 + 评审者。",
+    "scope": "incremental",
+    "files": ["references/gates.md", "roles/00-adjudicator.md", "roles/05-reviewer.md"],
+    "max_bytes": 9000
+  },
+  "stage.03.tasks": {
+    "description": "写 03：任务负责人角色卡 + 任务模板 + 路由。",
+    "scope": "incremental",
+    "files": ["roles/03-owner.md", "templates/03-tasks.md", "references/routes.md"],
+    "max_bytes": 12000
+  },
+  "stage.review": {
+    "description": "评审：评审者 + 检查 + 门禁。",
+    "scope": "incremental",
+    "files": ["roles/05-reviewer.md", "references/checks.md", "references/gates.md"],
+    "max_bytes": 10000
+  },
+  "stage.implement": {
+    "description": "执行：执行者角色卡 + 任务模板，不重读 01/02。",
+    "scope": "incremental",
+    "files": ["roles/04-implementer.md", "templates/03-tasks.md"],
+    "max_bytes": 10000
+  },
+  "stage.accept": {
+    "description": "验收：验收人 + 收敛模板 + 门禁。",
+    "scope": "incremental",
+    "files": ["roles/06-acceptor.md", "templates/04-converge.md", "references/gates.md"],
+    "max_bytes": 10000
+  },
+  "stage.ownership": {
+    "description": "判断内容归属时加载。",
+    "scope": "incremental",
+    "files": ["references/doc-set.md", "references/role-map.md"],
+    "max_bytes": 10000
+  },
+  "resume.fresh": {
+    "description": "新会话恢复：入口 + 流程 + 恢复协议 + 归属表 + 路由。",
+    "scope": "cumulative",
+    "include": ["bootstrap", "flow.main"],
+    "files": ["references/resume.md", "references/doc-set.md", "references/routes.md"],
+    "max_bytes": 20000
+  }
+}

@@ -175,7 +175,7 @@ def main():
 
     plan_pairs = read_unfenced(plan_path)
     plan_heads = sections(plan_pairs)
-    for section_name in ('方案总览', '需求可行性', '质量属性', '关键决策', '风险与应对', '交付', '验证手段', '交接给任务拆解'):
+    for section_name in ('方案总览', '需求兑现', '质量属性', '关键决策', '风险与应对', '交付', '验证手段', '交接给任务拆解'):
         if find_section(plan_heads, section_name) is None:
             warns.append('02-plan.md 建议补上「%s」节（技术总监视角）' % section_name)
     module_sec = find_section(plan_heads, '模块划分')
@@ -265,12 +265,12 @@ def main():
                 errors.append('门 2 结论仍是占位符：' + text.strip()[:60])
             elif 'reject' in text.lower():
                 errors.append('门 2 结论是 reject，必须退回上游修完重跑')
-            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text:
+            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text and '版本' in text:
                 pass
             elif '待审' in text or '未审' in text:
                 warns.append('门 2 结论仍是待审（尚未获得批准）')
             else:
-                errors.append('门 2 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… 或 待审')
+                errors.append('门 2 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… ｜ 版本：rN 或 待审')
 
     contracts_exists = os.path.isfile(contracts_path)
     contracts_heads = []
@@ -390,7 +390,7 @@ def main():
         errors.append('第 %d 行：%s' % (ln, msg))
     if not lint_common.has_role_header(raw, '技术总监'):
         errors.append('缺少文档头：> 角色：技术总监 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '需求可行性核对', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '风险与应对', '交付', '验证手段', '宪法检查', '门 2', '交接给任务拆解', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '需求兑现核对', '风险与应对', '交付', '验证手段', '宪法检查', '门 2', '交接给任务拆解', '修订记录']))
     return report('check_plan ' + base, errors, warns)
 
 

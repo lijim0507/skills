@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """任务检查（03-tasks.md）。
 
-只查机械事实：章节是否齐全、任务行格式与编号、每条任务是否挂了 FR 或标了「流程」、
+只查机械事实：章节是否齐全、任务行格式与编号、每条任务是否挂了 FR / EC / R 或标了「流程」、
 任务状态统计、任务卡字段、开工前检查的勾选统计。
 
 任务卡是给执行者的工单；简单任务可以只用索引行，非平凡任务应有卡。
@@ -151,8 +151,8 @@ def main():
         line_norm = norm(t)
         if '|流程' in line_norm:
             flow.add(num)
-        if not re.search(r'FR-\d{3}', t) and '|流程' not in line_norm:
-            unnamed.append('第 %d 行 T%03d 既没挂 FR 也没标 | 流程' % (lineno, num))
+        if not re.search(r'(?:FR-\d{3}|EC-\d{2,3}|R-\d{2,3})', t) and '|流程' not in line_norm:
+            unnamed.append('第 %d 行 T%03d 既没挂 FR / EC / R 也没标 | 流程' % (lineno, num))
 
     if not nums:
         errors.append('一条任务行都没有（格式必须是 - [ ] T001 …）')
@@ -162,7 +162,7 @@ def main():
         warns.append('任务编号没有按升序排列')
     errors.extend(unnamed[:5])
     if len(unnamed) > 5:
-        errors.append('还有 %d 条任务没挂 FR / 流程标记' % (len(unnamed) - 5))
+        errors.append('还有 %d 条任务没挂 FR / EC / R / 流程标记' % (len(unnamed) - 5))
 
     cards = collect_cards(heads, errors)
     card_count = 0
