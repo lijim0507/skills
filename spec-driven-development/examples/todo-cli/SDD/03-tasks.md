@@ -11,7 +11,7 @@
 ## 任务分配说明
 
 - 任务负责人 / 执行者：示例用户 / 示例执行者
-- 执行者开始前先读：任务卡 + 01 的 FR 验收节；不要求读 01/02 全文
+- 执行者开始前只读任务卡；卡里已摘录本任务相关的 FR 验收与约束。01/02 只作背景，不要求读全文
 - 代码范围 / 分支 / 目录：src/todo/，tests/
 - 通用完成标准：pytest 全绿，CLI 冒烟通过
 - 验证命令 / 环境：pytest；Python 3.10+
@@ -44,6 +44,7 @@
 - 输入：todos.json 路径
 - 产出：TaskStore 类与单元测试
 - 完成判据（DoD）：空文件、正常文件、损坏文件三种情况都有测试
+- 验收判据：FR-001 损坏文件时 add 返回非 0 且原文件不变；FR-002 空列表 list 输出“No todos”且退出码 0。
 - 验证：pytest tests/test_store.py
 - 依赖：无
 - 可并行：否
@@ -61,6 +62,7 @@
 - 输入：命令行参数
 - 产出：add 子命令与测试
 - 完成判据（DoD）：成功退出码 0，空参数退出码非 0
+- 验收判据：Given 空列表，When add “买牛奶”，Then 退出码 0 且 list 包含；Given 空文本，Then 退出码非 0；Given 损坏文件，Then 非 0 且原文件不变。
 - 验证：pytest tests/test_cli.py::test_add
 - 依赖：T001
 - 可并行：是
@@ -78,6 +80,7 @@
 - 输入：todos.json
 - 产出：list 子命令与测试
 - 完成判据（DoD）：空列表输出 No todos；两条记录按顺序输出
+- 验收判据：Given 两条待办，When list，Then 按创建顺序输出；Given 空列表，Then 输出“No todos”，退出码 0。
 - 验证：pytest tests/test_cli.py::test_list
 - 依赖：T001
 - 可并行：是
