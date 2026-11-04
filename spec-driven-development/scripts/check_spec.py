@@ -344,7 +344,7 @@ def main():
             errors.append('正文引用了不存在的 FR-%s' % m.group(1))
     if not lint_common.has_role_header(raw, '产品经理'):
         errors.append('缺少文档头：> 角色：产品经理 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['遵守的项目契约', '产品定位', '范围外', '用户故事', '功能需求', '外部契约', '未决项', '交接给技术总监', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['产品定位', '范围外', '用户故事', '功能需求', '外部契约', '未决项', '交接给技术总监', '修订记录']))
     return report('check_spec ' + path, errors, warns)
 
 
