@@ -3,7 +3,7 @@
 """任务检查（03-tasks.md）。
 
 只查机械事实：章节是否齐全、任务行格式与编号、每条任务是否挂了 FR / EC / R 或标了「流程」、
-任务状态统计、任务卡字段、开工前检查的勾选统计。
+任务状态统计、任务卡字段、覆盖映射与修订记录检查。
 
 任务卡是给执行者的工单；简单任务可以只用索引行，非平凡任务应有卡。
 卡里缺「目标 / 范围 / 输入 / 产出 / 完成判据 / 验收判据 / 验证 / 依赖」会报错。
@@ -89,10 +89,11 @@ CARD_REQUIRED = [
     ('完成判据（DoD）', '完成判据'),
     ('验收判据', '验收判据'),
     ('验证', '验证'),
+    ('证据', '证据'),
     ('依赖', '依赖'),
 ]
-REQUIRED = ['任务', '覆盖映射', '开工前检查', '修订记录']
-RECOMMENDED = ['任务分配说明', '执行批次', '任务卡', 'analyze 交叉检查', '收敛追加']
+REQUIRED = ['任务', '覆盖映射', '修订记录']
+RECOMMENDED = ['任务分配说明', '执行批次', '任务卡']
 
 
 def collect_cards(heads, errors):
@@ -185,37 +186,15 @@ def main():
         if card_count == 0:
             warns.append('「任务卡」节里没有任务卡')
 
-    chk_total, chk_checked = 0, 0
-    chk_lines = []
-    for _, t in pairs:
-        m = CHK.match(t)
-        if not m:
-            continue
-        chk_total += 1
-        chk_lines.append(t)
-        if m.group(1) in 'xX':
-            chk_checked += 1
-    if chk_total == 0:
-        warns.append('没有找到开工前检查项（格式必须是 - [ ] CHK001 …）')
-    else:
-        if chk_checked < chk_total:
-            warns.append('开工前检查未全勾：Checked %d / Total %d —— implement 前必须停下询问'
-                         % (chk_checked, chk_total))
-        chk_text = '\n'.join(chk_lines)
-        for keyword in ('任务卡', '完成判据', '可独立分配'):
-            if keyword not in chk_text:
-                warns.append('开工前检查建议包含「%s」相关项' % keyword)
-
     print('任务：共 %d ｜ 未完成 %d ｜ 已完成 %d ｜ 已作废 %d'
           % (len(nums), len(todo), len(done), len(void)))
-    print('任务卡：%d ｜ 开工前检查：Checked %d / Total %d'
-          % (card_count, chk_checked, chk_total))
+    print('任务卡：%d' % card_count)
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
         errors.append('第 %d 行：%s' % (ln, msg))
     if not lint_common.has_role_header(raw, '任务负责人'):
         errors.append('缺少文档头：> 角色：任务负责人 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['任务分配说明', '执行批次', '任务', '任务卡', '覆盖映射', 'analyze 交叉检查', '开工前检查', '收敛追加', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['任务分配说明', '执行批次', '任务', '任务卡', '覆盖映射', '修订记录']))
     for ln, msg in lint_common.empty_field_issues(raw):
         errors.append('第 %d 行：任务卡%s' % (ln, msg))
     return report('check_tasks ' + path, errors, warns)

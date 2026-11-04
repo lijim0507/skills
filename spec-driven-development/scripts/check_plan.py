@@ -3,7 +3,7 @@
 """方案结构检查（02-plan.md / 02-plan-contracts.md）。
 
 只查机械事实：模块划分节、模块清单、依赖方向、公开接口节引用和依赖环。
-层名/角色名只做提示，不判语义；模块粒度好不好由门 2 判断。
+层名/角色名只做提示，不判语义；模块粒度好不好由人放行前判断。
 
 用法: python check_plan.py <项目>/SDD
 """
@@ -14,7 +14,7 @@ import sys
 import lint_common
 
 FENCE = re.compile(r'^\s*(?:' + (chr(96) * 3) + r'|~~~)')
-# 仅用于提示，不参与错误判定；模块语义由门 2 判断。
+# 仅用于提示，不参与错误判定；模块语义由人放行前判断。
 ROLE_HINTS = {
     'ui', 'repository', 'service', 'controller', 'view', 'model',
     'domain', 'data', 'infrastructure', 'presentation', 'application',
@@ -249,29 +249,6 @@ def main():
     if cycle:
         errors.append('模块依赖成环：' + ' → '.join(cycle))
 
-    gate = find_section(plan_heads, '门 2')
-    if gate is None:
-        warns.append('02-plan.md 缺少「门 2」节')
-    else:
-        gate_text = '\n'.join(t for _, t in gate['body'])
-        if '模块划分' not in gate_text:
-            warns.append('门 2 清单没有提到模块划分')
-        concl = [t for _, t in gate['body'] if '结论' in t]
-        if not concl:
-            errors.append('门 2 小节里没有结论行')
-        else:
-            text = ' '.join(concl)
-            if re.search(r'<[^>]*>', text):
-                errors.append('门 2 结论仍是占位符：' + text.strip()[:60])
-            elif 'reject' in text.lower():
-                errors.append('门 2 结论是 reject，必须退回上游修完重跑')
-            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text and '版本' in text:
-                pass
-            elif '待审' in text or '未审' in text:
-                warns.append('门 2 结论仍是待审（尚未获得批准）')
-            else:
-                errors.append('门 2 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… ｜ 版本：rN 或 待审')
-
     contracts_exists = os.path.isfile(contracts_path)
     contracts_heads = []
     if contracts_exists:
@@ -390,7 +367,7 @@ def main():
         errors.append('第 %d 行：%s' % (ln, msg))
     if not lint_common.has_role_header(raw, '技术总监'):
         errors.append('缺少文档头：> 角色：技术总监 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '需求兑现核对', '风险与应对', '交付', '验证手段', '宪法检查', '门 2', '交接给任务拆解', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '需求兑现核对', '风险与应对', '交付', '验证手段', '契约合规', '交接给任务拆解', '修订记录']))
     return report('check_plan ' + base, errors, warns)
 
 

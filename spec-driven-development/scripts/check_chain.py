@@ -142,8 +142,8 @@ def main():
         errors.append('03-tasks.md 引用了不存在的 US%d' % n)
 
     plan_text = '\n'.join(t for _, t in plan[0])
-    if not re.search(r'宪法检查', plan_text):
-        warns.append('02-plan.md 里没有找到「宪法检查」节')
+    if not re.search(r'契约合规', plan_text):
+        warns.append('02-plan.md 里没有找到「契约合规」节')
     if not re.search(r'验证手段', plan_text):
         warns.append('02-plan.md 里没有找到「验证手段」节')
 

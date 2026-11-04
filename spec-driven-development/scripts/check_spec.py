@@ -8,9 +8,8 @@
 - 每个主要 / 次要 P 至少被一条用户故事引用
 - 每条新格式 FR 有来源、行为、验收；旧格式只提示迁移
 - FR 编号连续无重复
-- 门 1 是否留下结论
 
-只查机械事实；定位是否成立、契约是否可验证由门 1 人工判断。
+只查机械事实；定位是否成立、契约是否可验证由人放行前判断。
 用法: python check_spec.py <项目>/SDD/01-spec.md
 """
 
@@ -321,7 +320,7 @@ def main():
 
     if find_section(heads, '产品定位', '产品根') is None:
         errors.append('缺少必需章节：产品定位')
-    for name in ('用户故事', '功能需求', '门 1', '修订记录'):
+    for name in ('用户故事', '功能需求', '修订记录'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
     if find_section(heads, '交接给技术总监') is None:
@@ -337,24 +336,6 @@ def main():
         if info['kind'] != '不服务' and not info['stories']:
             errors.append('定位 %s 没有被任何用户故事引用' % rid)
 
-    gate = find_section(heads, '门 1')
-    if gate is not None:
-        concl = [t for _, t in gate['body'] if '结论' in t]
-        if not concl:
-            errors.append('门 1 小节里没有结论行')
-        else:
-            text = ' '.join(concl)
-            if re.search(r'<[^>]*>', text):
-                errors.append('门 1 结论仍是占位符：' + text.strip()[:60])
-            elif 'reject' in text.lower():
-                errors.append('门 1 结论是 reject，必须退回上游修完重跑')
-            elif 'approve' in text.lower() and '裁决人' in text and '日期' in text and '版本' in text:
-                pass
-            elif '待审' in text or '未审' in text:
-                warns.append('门 1 结论仍是待审（尚未获得批准）')
-            else:
-                errors.append('门 1 结论格式不明，应为 approve ｜ 裁决人：… ｜ 日期：… ｜ 版本：rN 或 待审')
-
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
         errors.append('第 %d 行：%s' % (ln, msg))
@@ -363,7 +344,7 @@ def main():
             errors.append('正文引用了不存在的 FR-%s' % m.group(1))
     if not lint_common.has_role_header(raw, '产品经理'):
         errors.append('缺少文档头：> 角色：产品经理 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['产品定位', '用户故事', '功能需求', '未决项', '门 1', '交接给技术总监', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['遵守的项目契约', '产品定位', '范围外', '用户故事', '功能需求', '外部契约', '未决项', '交接给技术总监', '修订记录']))
     return report('check_spec ' + path, errors, warns)
 
 
