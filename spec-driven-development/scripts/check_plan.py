@@ -3,7 +3,7 @@
 """方案结构检查（02-plan.md / 02-plan-contracts.md）。
 
 只查机械事实：模块划分节、模块清单、依赖方向、公开接口节引用和依赖环。
-层名/角色名只做提示，不判语义；模块粒度好不好由人放行前判断。
+层名/角色名只做提示，不判语义；模块粒度好不好由人确认前判断。
 
 用法: python check_plan.py <项目>/SDD
 """
@@ -14,7 +14,7 @@ import sys
 import lint_common
 
 FENCE = re.compile(r'^\s*(?:' + (chr(96) * 3) + r'|~~~)')
-# 仅用于提示，不参与错误判定；模块语义由人放行前判断。
+# 仅用于提示，不参与错误判定；模块语义由人确认前判断。
 ROLE_HINTS = {
     'ui', 'repository', 'service', 'controller', 'view', 'model',
     'domain', 'data', 'infrastructure', 'presentation', 'application',
