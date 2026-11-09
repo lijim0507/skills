@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """方案结构检查（02-plan.md / 02-plan-contracts.md）。
 
-只查机械事实：模块划分节、模块清单、依赖方向、公开接口节引用和依赖环。
+只查机械事实：模块划分节、模块清单、公开接口节引用和依赖环。
 层名/角色名只做提示，不判语义；模块粒度好不好由人确认前判断。
 
 用法: python check_plan.py <项目>/SDD
@@ -256,8 +256,6 @@ def main():
         contracts_heads = sections(contracts_pairs)
         if find_section(contracts_heads, '模块清单') is None:
             errors.append('02-plan-contracts.md 缺少「模块清单」节')
-        if find_section(contracts_heads, '依赖方向') is None:
-            errors.append('02-plan-contracts.md 缺少「依赖方向」节')
         if find_section(contracts_heads, '模块公开接口') is None and find_section(contracts_heads, '模块间契约') is None:
             errors.append('02-plan-contracts.md 缺少「模块公开接口」节')
 

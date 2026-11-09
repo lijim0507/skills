@@ -4,16 +4,11 @@
 
 ## 模块清单
 
-| 模块 | 一句话职责 | 拥有写权限的数据 |
-| --- | --- | --- |
-| CommandParser | 解析命令并分发 | 无 |
-| TaskStore | 读写待办 | todos.json |
-| TaskRenderer | 格式化输出 | 无 |
-
-## 依赖方向
-
-- 允许：CommandParser → TaskStore；CommandParser → TaskRenderer；TaskRenderer → TaskStore
-- 禁止：TaskStore → CommandParser；TaskStore → TaskRenderer；TaskRenderer → CommandParser
+| 模块 | 一句话职责 |
+| --- | --- |
+| CommandParser | 解析命令并分发 |
+| TaskStore | 读写待办 |
+| TaskRenderer | 格式化输出 |
 
 ## 模块公开接口
 
@@ -27,10 +22,10 @@
 
 **公开接口**
 
-| 接口 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
-| --- | --- | --- | --- | --- |
-| `parse_args(argv: list[str]) -> Command` | 命令行参数 | Command | E002 参数错误 | 同步 |
-| `execute(cmd: Command) -> int` | 已解析命令 | 0 成功 | E001 数据文件损坏；E002 参数错误 | 同步 |
+| 接口 | 功能 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
+| --- | --- | --- | --- | --- | --- |
+| `parse_args(argv: list[str]) -> Command` | 把 argv 解析成 Command | 命令行参数 | Command | E002 参数错误——打印用法，不执行 | 同步 |
+| `execute(cmd: Command) -> int` | 分发命令并返回退出码 | 已解析命令 | 0 成功 | E001 数据文件损坏——报错并保留原文件；E002 参数错误——打印用法，不执行 | 同步 |
 
 **模块约束**
 
@@ -44,14 +39,14 @@
 
 | 类型 | 定义 / 来源 | 语义 |
 | --- | --- | --- |
-| `Todo` | `@dataclass Todo(id: int, text: str, created_at: str)` | 一条待办 |
+| `Todo` | 见 `02-plan-data-model.md` 的实体 | 一条待办 |
 
 **公开接口**
 
-| 接口 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
-| --- | --- | --- | --- | --- |
-| `add(text: str) -> int` | 待办文本 | 0 成功 | E001 数据文件损坏；E002 参数错误 | 同步 |
-| `list_todos() -> list[Todo]` | 无 | 待办列表 | E001 数据文件损坏 | 同步 |
+| 接口 | 功能 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
+| --- | --- | --- | --- | --- | --- |
+| `add(text: str) -> int` | 追加一条待办并返回退出码 | 待办文本 | 0 成功 | E001 数据文件损坏——报错并保留原文件；E002 参数错误——打印用法，不执行 | 同步 |
+| `list_todos() -> list[Todo]` | 按创建顺序返回全部待办 | 无 | 待办列表 | E001 数据文件损坏——报错并保留原文件 | 同步 |
 
 **模块约束**
 
@@ -68,9 +63,9 @@
 
 **公开接口**
 
-| 接口 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
-| --- | --- | --- | --- | --- |
-| `render(items: list[Todo]) -> None` | 待办列表 | 无 | 无 | 同步；只读列表 |
+| 接口 | 功能 | 输入 | 输出 / 返回 | 错误 | 调用上下文 |
+| --- | --- | --- | --- | --- | --- |
+| `render(items: list[Todo]) -> None` | 把待办列表格式化到 stdout | 待办列表 | 无 | 无 | 同步；只读列表 |
 
 **模块约束**
 
@@ -78,9 +73,4 @@
 - 输出格式由本模块决定，调用方不解析文本。
 - 契约测试：`tests/test_renderer.py`
 
-## 错误码
 
-| 码 | 含义 | 处置 |
-| --- | --- | --- |
-| E001 | 数据文件损坏 | 报错并保留原文件 |
-| E002 | 参数错误 | 打印用法，命令不执行 |
