@@ -1,30 +1,37 @@
-# Todo CLI 示例（四角色版）
+# Todo CLI 示例（四阶段版）
 
-这是一套跑通的最小 SDD 文档集，用来演示“角色卡 + 流程 + 交接”的链路，不是让你照抄字段。
+这是一套跑通的最小 SDD 文档集，用来演示“一阶段一角色一文档 + 交接与追溯”的链路，不是让你照抄字段。
 
 - `SDD/00-contract.md`：项目契约。长期规则与边界，项目初始化时写一次。
-- `SDD/01-spec.md`：产品经理角色卡产物。定位、范围外、用户故事、FR。
-- `SDD/02-plan.md`：技术总监角色卡产物。模块、数据、决策、质量、风险、验证。
-- `SDD/02-plan-research.md`：关键决策与被否决方案。
-- `SDD/02-plan-contracts.md`：模块契约与数据。模块清单、公开/私有变量、公开接口。
-- `SDD/03-tasks.md`：任务负责人角色卡产物。批次、任务卡、覆盖映射；执行证据也落在这里。
+- `SDD/01-requirements.md`：需求分析师产物（SWE.1 结构）。概述、需求清单、需求间依赖、输入与输出、软件需求；每条 REQ 带优先级、来源与验证准则；末尾追溯分析与变更历史。
+- `SDD/02-architecture.md`：架构师产物（SWE.2 结构）。简介、资源、沟通计划、软件分解（数据定义 / 接口 / 依赖矩阵 / 模块清单）、动态行为、资源与调度、异常清单、模块契约、追溯分析。
+- `SDD/03-design.md`：详细设计师产物（SWE.3 结构）。组件描述、接口、静态 / 动态特性、8.2 函数设计（每个模块一个分组，函数 ID / 所在文件）、可追溯性。
+- `SDD/04-implementation.md`：实现者产物。执行批次、任务卡、覆盖映射、验证与证据。
+
+追溯链：
+
+```
+REQ（01）→ 模块 / 公开接口（02）→ 函数（03）→ 任务（04）→ 验证证据
+```
 
 ## 怎么用它
 
-1. 先读 `00-contract.md` 的项目约束，再读 `01-spec.md` 的产品定位。
-2. 读 `01-spec.md` 的「交接给技术总监」，对照 `02-plan.md` 的「可行性核对」。
-3. 读 `02-plan.md` 的「交接给任务拆解」，对照 `03-tasks.md` 的任务卡。
-4. 看 `03-tasks.md` 里每张卡的「验证 / 证据」栏，这是人验收时要抽查的东西。
+1. 先读 `00-contract.md` 的项目约束，再读 `01-requirements.md` 的 REQ 与「交接给架构」。
+2. 读 `02-architecture.md` 的模块清单和每个模块的「覆盖 REQ」，确认每条 REQ 都有落点。
+3. 读 `03-design.md`，确认每个架构模块都有函数设计与状态流程。
+4. 读 `04-implementation.md` 的任务卡，确认每条 REQ 都被任务覆盖，且「验证 / 证据」可复跑。
+5. 人按 `01-requirements.md` 的子条目验收，抽查 `04-implementation.md` 的证据。
 
 ## 验证
 
 在技能根目录运行：
 
 ```bash
-python scripts/check_spec.py  examples/todo-cli/SDD/01-spec.md
-python scripts/check_tasks.py examples/todo-cli/SDD/03-tasks.md
-python scripts/check_chain.py examples/todo-cli/SDD
-python scripts/check_plan.py  examples/todo-cli/SDD
+python scripts/check_requirements.py    examples/todo-cli/SDD/01-requirements.md
+python scripts/check_architecture.py    examples/todo-cli/SDD
+python scripts/check_design.py          examples/todo-cli/SDD
+python scripts/check_implementation.py  examples/todo-cli/SDD/04-implementation.md
+python scripts/check_chain.py           examples/todo-cli/SDD
 ```
 
-四道检查应当全部通过。
+五道检查应当全部通过。

@@ -1,31 +1,37 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""需求链条检查（故事 -> FR -> 任务）。
+"""追溯链检查：REQ（01）→ 模块 / 公开接口（02）→ 函数（03）→ 任务（04）。
 
-只查机械事实：每条 FR 是否挂在故事下、是否有任务覆盖、任务引用的 FR/US 是否真实存在；
-各文档是否留了修订记录节。
+只查机械事实：每条 REQ 都有架构落点与任务落点、引用的编号存在、模块清单与详细设计一致。
+不检查覆盖是否“真”成立；那是人确认与验证阶段的事。
 
 用法: python check_chain.py <项目>/SDD
 """
 
+import os
 import re
 import sys
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
+REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
+REQ_DEF = re.compile(r'^\s*\*\*\s*\[?(' + REQ_ID + r')\]?\s*(.*?)\s*\*\*\s*$')
+REQ_IN_TEXT = re.compile(r'\b(' + REQ_ID + r')\b')
+TASK_LINE = re.compile(r'^\s*[-*]\s+\[[ xX~]\]\s+(T\d{3})\b(.+)$')
+TASK_TAG = re.compile(r'(?:REQ(?:-[A-Za-z0-9]+)+|R-\d{2,3})')
+NON_MODULE = {'数据质量', '交接给实现', '修订记录'}
 
 
 def read_unfenced(path):
-    """读文件，返回 [(行号, 文本)]，跳过围栏代码块（含围栏标记本身）。"""
     with open(path, encoding='utf-8') as fh:
         raw = fh.read().splitlines()
     out = []
     in_fence = False
-    for i, ln in enumerate(raw, 1):
-        if FENCE.match(ln):
+    for i, line in enumerate(raw, 1):
+        if FENCE.match(line):
             in_fence = not in_fence
             continue
         if not in_fence:
-            out.append((i, ln))
+            out.append((i, line))
     return out
 
 
@@ -33,8 +39,11 @@ def norm(s):
     return re.sub(r'\s+', '', s)
 
 
+def strip_number(title):
+    return re.sub(r'^\d+(?:\.\d+)*\s*', '', title.strip())
+
+
 def sections(pairs):
-    """按 ## / ### 切分，返回 [{level,title,line,body:[[lineno,text]]}]"""
     heads = []
     for idx, (lineno, text) in enumerate(pairs):
         m = re.match(r'^(#{1,6})\s+(.+?)\s*$', text)
@@ -48,13 +57,12 @@ def sections(pairs):
 
 
 def find_section(heads, *names):
-    """按归一化标题匹配：先精确匹配，再前缀匹配。"""
     wanted = [norm(n) for n in names]
     for h in heads:
-        if norm(h['title']) in wanted:
+        if norm(strip_number(h['title'])) in wanted:
             return h
     for h in heads:
-        t = norm(h['title'])
+        t = norm(strip_number(h['title']))
         for w in wanted:
             if t.startswith(w):
                 return h
@@ -70,19 +78,135 @@ def report(tag, errors, warns):
         print('FAIL %s：%d 个错误，%d 个警告' % (tag, len(errors), len(warns)))
         return 1
     print('结构检查通过 · 语义未验证  %s（%d 个警告）' % (tag, len(warns)))
-    print('未覆盖：模板符合度、角色边界、可验收性、可行性')
+    print('未覆盖：覆盖是否真成立、验证证据是否充分')
     return 0
 
-import os
 
-TASK = re.compile(r'^\s*[-*]\s+\[([ xX~])\]\s*T(\d{3})\b')
+def is_separator(cells):
+    return all(re.fullmatch(r':?-{2,}:?', c.replace(' ', '')) for c in cells if c)
 
 
-def load(path):
+def table_rows(body):
+    rows = []
+    for lineno, text in body:
+        s = text.strip()
+        if not s.startswith('|'):
+            continue
+        cells = [c.strip() for c in s.strip('|').split('|')]
+        if not cells or is_separator(cells):
+            continue
+        rows.append((lineno, cells))
+    return rows
+
+
+def col_index(header, *keywords):
+    for i, h in enumerate(header):
+        hn = norm(h)
+        if all(k in hn for k in keywords):
+            return i
+    return None
+
+
+def clean_cell(s):
+    return s.strip().strip(chr(96)).strip('*').strip()
+
+
+def parse_reqs(path):
     if not os.path.isfile(path):
-        return None
-    pairs = read_unfenced(path)
-    return pairs, sections(pairs)
+        return {}
+    heads = sections(read_unfenced(path))
+    sec = find_section(heads, '软件需求')
+    if sec is None:
+        return {}
+    body = list(sec['body'])
+    started = False
+    for h in heads:
+        if h is sec:
+            started = True
+            continue
+        if not started:
+            continue
+        if h['level'] <= sec['level']:
+            break
+        body.extend(h['body'])
+    defs = {}
+    for lineno, t in body:
+        m = REQ_DEF.match(t)
+        if m:
+            defs[clean_cell(m.group(1))] = lineno
+    return defs
+
+
+def arch_info(path):
+    """返回 (模块集合, 模块→覆盖 REQ 列表)。"""
+    modules, cover = set(), {}
+    if not os.path.isfile(path):
+        return modules, cover
+    heads = sections(read_unfenced(path))
+    sec = find_section(heads, '模块清单')
+    if sec is not None:
+        rows = table_rows(sec['body'])
+        if rows:
+            idx = col_index(rows[0][1], '模块')
+            if idx is not None:
+                for _, cells in rows[1:]:
+                    if len(cells) > idx:
+                        name = clean_cell(cells[idx])
+                        if name and not (name.startswith('<') and name.endswith('>')):
+                            modules.add(name)
+    csec = find_section(heads, '模块契约')
+    if csec is not None:
+        start = heads.index(csec)
+        for h in heads[start + 1:]:
+            if h['level'] <= 2:
+                break
+            if h['level'] != 3:
+                continue
+            name = clean_cell(h['title'])
+            if not name or (name.startswith('<') and name.endswith('>')):
+                continue
+            text = '\n'.join(t for _, t in h['body'])
+            m = re.search(r'\*\*覆盖 REQ\*\*\s*[：:]\s*(.+)', text)
+            cover[name] = REQ_IN_TEXT.findall(m.group(1)) if m else []
+    return modules, cover
+
+
+def design_modules(path):
+    if not os.path.isfile(path):
+        return []
+    heads = sections(read_unfenced(path))
+    sec = find_section(heads, '函数设计')
+    if sec is None:
+        return []
+    mods = []
+    started = False
+    for h in heads:
+        if h is sec:
+            started = True
+            continue
+        if not started:
+            continue
+        if h['level'] <= sec['level']:
+            break
+        if h['level'] != sec['level'] + 1:
+            continue
+        name = clean_cell(strip_number(h['title']))
+        if name in NON_MODULE:
+            continue
+        if name and not (name.startswith('<') and name.endswith('>')):
+            mods.append(name)
+    return mods
+
+
+def task_reqs(path):
+    if not os.path.isfile(path):
+        return []
+    refs = []
+    for _, text in read_unfenced(path):
+        m = TASK_LINE.match(text)
+        if m:
+            refs.extend(TASK_TAG.findall(text))
+    return refs
 
 
 def main():
@@ -92,63 +216,61 @@ def main():
     base = sys.argv[1]
     errors, warns = [], []
 
-    spec = load(os.path.join(base, '01-spec.md'))
-    plan = load(os.path.join(base, '02-plan.md'))
-    tasks = load(os.path.join(base, '03-tasks.md'))
+    spec = os.path.join(base, '01-requirements.md')
+    arch = os.path.join(base, '02-architecture.md')
+    design = os.path.join(base, '03-design.md')
+    impl = os.path.join(base, '04-implementation.md')
 
-    for name, doc in [('01-spec.md', spec), ('02-plan.md', plan), ('03-tasks.md', tasks)]:
-        if doc is None:
-            errors.append('找不到 ' + name)
-    if errors:
-        return report('check_chain ' + base, errors, warns)
+    reqs = parse_reqs(spec)
+    modules, cover = arch_info(arch)
+    dmods = design_modules(design)
+    trefs = task_reqs(impl)
 
-    spec_pairs, spec_heads = spec
-    task_pairs, task_heads = tasks
+    if not reqs:
+        errors.append('没读到 01-requirements.md 的 REQ 定义')
+    if not modules:
+        errors.append('没读到 02-architecture.md 的模块清单')
+    if not dmods:
+        errors.append('没读到 03-design.md 的模块小节')
+    if not trefs:
+        errors.append('没读到 04-implementation.md 的任务行')
 
-    for name, heads in [('01-spec.md', spec_heads), ('02-plan.md', plan[1]), ('03-tasks.md', task_heads)]:
-        if find_section(heads, '修订记录') is None:
-            errors.append('%s 缺少「修订记录」节' % name)
+    covered_by_arch = set()
+    for name, rids in cover.items():
+        for rid in rids:
+            covered_by_arch.add(rid)
+            if rid not in reqs:
+                errors.append('%s 的「覆盖 REQ」引用了不存在的 %s' % (name, rid))
 
-    stories = {}
-    for h in spec_heads:
-        m = re.match(r'^US\s*(\d+)', norm(h['title']))
-        if m:
-            stories[int(m.group(1))] = h
+    covered_by_task = set()
+    for rid in trefs:
+        covered_by_task.add(rid)
+        if rid not in reqs:
+            errors.append('任务行引用了不存在的 %s' % rid)
 
-    fr_def = {}
-    sec = find_section(spec_heads, '功能需求')
-    for _, t in (sec['body'] if sec else []):
-        m = re.match(r'^\s*[-*]?\s*\*\*(FR-\d{3})\*\*', t)
-        if m:
-            fr_def[int(m.group(1).split('-')[1])] = None
+    for rid in sorted(set(reqs) - covered_by_arch):
+        errors.append('%s 没有被任何架构模块覆盖（链条断了）' % rid)
+    for rid in sorted(set(reqs) - covered_by_task):
+        errors.append('%s 没有被任何任务覆盖（链条断了）' % rid)
 
-    for n, h in stories.items():
-        body = '\n'.join(t for _, t in h['body'])
-        for m in re.finditer(r'FR-(\d{3})', body):
-            fr_def[int(m.group(1))] = n
+    for name in sorted(set(dmods) - modules):
+        errors.append('详细设计里有架构清单中没有的模块：%s' % name)
+    for name in sorted(modules - set(dmods)):
+        errors.append('架构模块没有详细设计小节：%s' % name)
+    for name in sorted(set(cover) - modules):
+        errors.append('模块契约里有模块清单中没有的模块：%s' % name)
 
-    task_text = '\n'.join(t for _, t in task_pairs if TASK.match(t))
-    task_fr = set(int(m.group(1)) for m in re.finditer(r'FR-(\d{3})', task_text))
-    task_us = set(int(m.group(1)) for m in re.finditer(r'US\s*(\d+)', task_text))
+    for label, path in (('01', spec), ('02', arch), ('03', design), ('04', impl)):
+        if not os.path.isfile(path):
+            warns.append('找不到 %s 文档：%s' % (label, path))
+            continue
+        heads = sections(read_unfenced(path))
+        expected = '变更历史' if label == '01' else '修订记录'
+        if find_section(heads, expected) is None:
+            errors.append('%s 文档缺少「%s」' % (label, expected))
 
-    for n in sorted(fr_def):
-        if fr_def[n] is None:
-            warns.append('FR-%03d 没有挂在任何用户故事下' % n)
-        if n not in task_fr:
-            errors.append('FR-%03d 没有任务覆盖（链条断了）' % n)
-    for n in sorted(task_fr - set(fr_def)):
-        errors.append('03-tasks.md 引用了不存在的 FR-%03d（幽灵引用）' % n)
-    for n in sorted(task_us - set(stories)):
-        errors.append('03-tasks.md 引用了不存在的 US%d' % n)
-
-    plan_text = '\n'.join(t for _, t in plan[0])
-    if not re.search(r'契约合规', plan_text):
-        warns.append('02-plan.md 里没有找到「契约合规」节')
-    if not re.search(r'^#{2,3}\s*验证', plan_text, re.M):
-        warns.append('02-plan.md 里没有找到「验证」节')
-
-    print('链条：故事 %d ｜ FR %d ｜ 被任务覆盖的 FR %d'
-          % (len(stories), len(fr_def), len(task_fr & set(fr_def))))
+    print('链条：REQ %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
+          % (len(reqs), len(set(reqs) & covered_by_arch), len(set(reqs) & covered_by_task)))
     return report('check_chain ' + base, errors, warns)
 
 

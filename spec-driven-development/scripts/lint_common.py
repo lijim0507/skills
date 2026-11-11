@@ -21,6 +21,11 @@ def has_role_header(text, keyword):
     return False
 
 
+def strip_number(title):
+    """去掉标题开头的章节号：`5.1 架构摘要（软件描述）` → `架构摘要（软件描述）`。"""
+    return re.sub(r'^\d+(?:\.\d+)*\s*', '', title.strip())
+
+
 def heading_order_warnings(text, order):
     heads = []
     for line in text.splitlines():
@@ -28,8 +33,9 @@ def heading_order_warnings(text, order):
         if not m:
             continue
         title = m.group(1).strip()
+        plain = strip_number(title)
         for idx, name in enumerate(order):
-            if title.startswith(name):
+            if plain.startswith(name):
                 heads.append((idx, title))
                 break
     idxs = [i for i, _ in heads]

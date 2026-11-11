@@ -25,7 +25,7 @@
 ### Principle: 公共接口边界
 
 **Rule:**
-- MUST 只通过 `02-plan-contracts.md` 列出的公开接口跨模块调用
+- MUST 只通过 `02-architecture.md` 列出的公开接口跨模块调用
 - MUST NOT 直接访问其他模块的内部函数或数据
 
 **Verification:**
@@ -66,7 +66,7 @@
 
 **Verification:**
 - 自动：CI 跑 `pytest`
-- 人工：对照 03 任务卡的「验证 / 证据」
+- 人工：对照 `04-implementation.md` 任务卡的「验证 / 证据」
 
 **Exception:**
 - 无法在主机验证时，MUST 写明原因与替代验证
@@ -97,7 +97,7 @@
 ### Principle: 接口与依赖变更受控
 
 **Rule:**
-- MUST 公共接口或依赖变更在 `02-plan.md` 说明影响并取得人批准
+- MUST 公共接口或依赖变更在 `02-architecture.md` 说明影响并取得人批准
 
 **Verification:**
 - 人工：对照「契约合规」与修订记录
