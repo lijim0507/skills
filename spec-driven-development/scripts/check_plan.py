@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """方案结构检查（02-plan.md / 02-plan-contracts.md）。
 
-只查机械事实：模块划分节、模块清单、公开接口节引用和依赖环。
+只查机械事实：模块清单（在 contracts）、公开接口节引用和依赖环。
 层名/角色名只做提示，不判语义；模块粒度好不好由人确认前判断。
 
 用法: python check_plan.py <项目>/SDD
@@ -175,79 +175,15 @@ def main():
 
     plan_pairs = read_unfenced(plan_path)
     plan_heads = sections(plan_pairs)
-    for section_name in ('方案总览', '需求兑现', '质量属性', '关键决策', '风险与应对', '交付', '验证手段', '交接给任务拆解'):
-        if find_section(plan_heads, section_name) is None:
-            warns.append('02-plan.md 建议补上「%s」节（技术总监视角）' % section_name)
-    module_sec = find_section(plan_heads, '模块划分')
+    for names in (('摘要', '方案总览'), ('上下文与约束', '技术上下文'),
+                  ('可行性核对', '需求兑现核对', '需求兑现'),
+                  ('风险与回退', '风险与应对'), ('验证', '验证手段'),
+                  ('交付',), ('交接给任务拆解',)):
+        if find_section(plan_heads, *names) is None:
+            warns.append('02-plan.md 建议补上「%s」节（技术总监视角）' % names[0])
+
     modules = {}
     deps = {}
-
-    if module_sec is None:
-        errors.append('02-plan.md 缺少「模块划分」节')
-    else:
-        rows = table_rows(module_sec['body'])
-        if not rows:
-            errors.append('「模块划分」节里没有表格')
-        else:
-            header = rows[0][1]
-            idx_module = col_index(header, '模块')
-            idx_duty = col_index(header, '职责')
-            idx_tables = col_index(header, '拥有', '表')
-            if idx_tables is None:
-                idx_tables = col_index(header, '拥有', '数据')
-            idx_deps = col_index(header, '依赖')
-            idx_write = col_index(header, '写权限')
-            idx_layer = col_index(header, '层')
-            if idx_layer is None:
-                idx_layer = col_index(header, '分类')
-            required = [
-                ('模块', idx_module), ('职责', idx_duty),
-                ('拥有或读写的数据', idx_tables), ('依赖', idx_deps),
-                ('写权限', idx_write),
-            ]
-            for label, idx in required:
-                if idx is None:
-                    errors.append('「模块划分」表头缺少列：' + label)
-            if all(idx is not None for _, idx in required):
-                for lineno, cells in rows[1:]:
-                    if len(cells) <= max(idx_module, idx_duty, idx_tables, idx_deps, idx_write):
-                        errors.append('第 %d 行模块表列数不足' % lineno)
-                        continue
-                    name = clean_cell(cells[idx_module])
-                    if not name:
-                        errors.append('第 %d 行模块名为空' % lineno)
-                        continue
-                    if is_placeholder(name):
-                        warns.append('第 %d 行模块名仍是占位符：%s' % (lineno, name))
-                    if name in modules:
-                        errors.append('模块名重复：%s' % name)
-                    modules[name] = (lineno, cells)
-                    if is_role_hint(name):
-                        warns.append('第 %d 行模块名疑似分层类别或泛指角色，请确认它是具体模块：%s' % (lineno, name))
-                    if not clean_cell(cells[idx_duty]):
-                        errors.append('模块 %s 缺少职责' % name)
-                    if not clean_cell(cells[idx_tables]):
-                        errors.append('模块 %s 缺少「拥有或读写的表」' % name)
-                    if not clean_cell(cells[idx_write]):
-                        errors.append('模块 %s 缺少写权限' % name)
-                    elif is_placeholder(clean_cell(cells[idx_write])):
-                        warns.append('模块 %s 的写权限仍是占位符' % name)
-                if not modules:
-                    errors.append('「模块划分」没有有效模块行')
-
-                for name, (lineno, cells) in modules.items():
-                    deps[name] = []
-                    for dep in parse_deps(cells[idx_deps]):
-                        if is_placeholder(dep):
-                            warns.append('模块 %s 的依赖仍是占位符：%s' % (name, dep))
-                            continue
-                        deps[name].append(dep)
-                        if dep not in modules:
-                            warns.append('模块 %s 依赖的 %s 不在模块清单中' % (name, dep))
-
-    cycle = find_cycle(deps) if deps else None
-    if cycle:
-        errors.append('模块依赖成环：' + ' → '.join(cycle))
 
     contracts_exists = os.path.isfile(contracts_path)
     contracts_heads = []
@@ -256,8 +192,10 @@ def main():
         contracts_heads = sections(contracts_pairs)
         if find_section(contracts_heads, '模块清单') is None:
             errors.append('02-plan-contracts.md 缺少「模块清单」节')
-        if find_section(contracts_heads, '模块公开接口') is None and find_section(contracts_heads, '模块间契约') is None:
-            errors.append('02-plan-contracts.md 缺少「模块公开接口」节')
+        if (find_section(contracts_heads, '模块契约与数据') is None
+                and find_section(contracts_heads, '模块公开接口') is None
+                and find_section(contracts_heads, '模块间契约') is None):
+            errors.append('02-plan-contracts.md 缺少「模块契约与数据」或「模块公开接口」节')
 
     contract_modules = set()
     list_sec = find_section(contracts_heads, '模块清单')
@@ -268,26 +206,49 @@ def main():
         else:
             header = rows[0][1]
             idx_module = col_index(header, '模块')
+            idx_duty = col_index(header, '职责')
+            idx_deps = col_index(header, '依赖')
             if idx_module is None:
                 errors.append('「模块清单」表头缺少「模块」列')
-            else:
+            if idx_duty is None:
+                errors.append('「模块清单」表头缺少「职责」列')
+            if idx_module is not None:
                 for lineno, cells in rows[1:]:
                     if len(cells) <= idx_module:
                         continue
                     name = clean_cell(cells[idx_module])
                     if not name:
                         continue
-                    contract_modules.add(name)
                     if is_placeholder(name):
                         warns.append('第 %d 行契约模块名仍是占位符：%s' % (lineno, name))
+                        continue
+                    if name in contract_modules:
+                        errors.append('模块名重复：%s' % name)
+                    contract_modules.add(name)
+                    modules[name] = (lineno, cells)
                     if is_role_hint(name):
                         warns.append('第 %d 行契约模块名疑似分层类别或泛指角色，请确认它是具体模块：%s' % (lineno, name))
-                    if name not in modules:
-                        errors.append('契约模块清单里的 %s 不在 02-plan.md 的「模块划分」中' % name)
+                    if idx_duty is not None and len(cells) > idx_duty and not clean_cell(cells[idx_duty]):
+                        errors.append('模块 %s 缺少职责' % name)
+                    deps[name] = []
+                    if idx_deps is not None and len(cells) > idx_deps:
+                        for dep in parse_deps(cells[idx_deps]):
+                            if is_placeholder(dep):
+                                warns.append('模块 %s 的依赖仍是占位符：%s' % (name, dep))
+                                continue
+                            deps[name].append(dep)
                 if not contract_modules:
                     errors.append('「模块清单」没有有效模块行')
+                for name, dep_list in deps.items():
+                    for dep in dep_list:
+                        if dep not in contract_modules:
+                            warns.append('模块 %s 依赖的 %s 不在模块清单中' % (name, dep))
+                cycle = find_cycle(deps) if deps else None
+                if cycle:
+                    errors.append('模块依赖成环：' + ' → '.join(cycle))
 
-    interface_sec = find_section(contracts_heads, '模块公开接口')
+    interface_sec = (find_section(contracts_heads, '模块契约与数据')
+                     or find_section(contracts_heads, '模块公开接口'))
     legacy_sec = find_section(contracts_heads, '模块间契约')
     interface_modules = []
     contracts = []
@@ -316,8 +277,8 @@ def main():
                 if name not in contract_modules:
                     errors.append('第 %d 行接口节的 %s 不在「模块清单」中' % (h['line'], name))
             body_text = chr(10).join(t for _, t in h['body'])
-            if not any(k in body_text for k in ('公开类型', '公开接口', '事件与回调', '无公开接口')):
-                warns.append('第 %d 行 %s 的公开接口小节没有「公开类型 / 公开接口 / 事件与回调 / 无公开接口」内容' % (h['line'], name))
+            if not any(k in body_text for k in ('公开变量', '私有变量', '公开接口', '事件与回调', '无公开接口')):
+                warns.append('第 %d 行 %s 的契约小节没有「公开变量 / 私有变量 / 公开接口 / 事件与回调」内容' % (h['line'], name))
         seen = set()
         for name in interface_modules:
             if name in seen:
@@ -326,7 +287,7 @@ def main():
         for name in sorted(contract_modules - seen):
             errors.append('模块清单里的 %s 没有「模块公开接口」小节' % name)
         if not interface_modules and '无内部契约' not in chr(10).join(t for _, t in interface_sec['body']):
-            warns.append('「模块公开接口」没有找到模块小节')
+            warns.append('「模块契约与数据」没有找到模块小节')
     elif legacy_sec is not None:
         warns.append('使用旧版「模块间契约」按依赖对列举；建议迁移为「模块公开接口」，每个模块只写一次')
         start = contracts_heads.index(legacy_sec)
@@ -365,7 +326,7 @@ def main():
         errors.append('第 %d 行：%s' % (ln, msg))
     if not lint_common.has_role_header(raw, '技术总监'):
         errors.append('缺少文档头：> 角色：技术总监 ｜ 依据：…')
-    warns.extend(lint_common.heading_order_warnings(raw, ['方案总览', '技术上下文', '模块划分', '数据与契约', '质量属性与约束', '关键决策与备选', '需求兑现核对', '风险与应对', '交付', '验证手段', '契约合规', '交接给任务拆解', '修订记录']))
+    warns.extend(lint_common.heading_order_warnings(raw, ['摘要', '上下文与约束', '可行性核对', '非功能与横切', '风险与回退', '验证', '交付', '交接给任务拆解', '附录']))
     return report('check_plan ' + base, errors, warns)
 
 

@@ -26,13 +26,12 @@
     "max_bytes": 12000
   },
   "stage.02.plan": {
-    "description": "写 02：技术总监角色卡 + 四个方案模板。",
+    "description": "写 02：技术总监角色卡 + 三个方案模板。",
     "scope": "incremental",
     "files": [
       "roles/02-architect.md",
       "templates/02-plan.md",
       "templates/02-plan-contracts.md",
-      "templates/02-plan-data-model.md",
       "templates/02-plan-research.md"
     ],
     "max_bytes": 20000

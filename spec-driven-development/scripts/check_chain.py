@@ -144,8 +144,8 @@ def main():
     plan_text = '\n'.join(t for _, t in plan[0])
     if not re.search(r'契约合规', plan_text):
         warns.append('02-plan.md 里没有找到「契约合规」节')
-    if not re.search(r'验证手段', plan_text):
-        warns.append('02-plan.md 里没有找到「验证手段」节')
+    if not re.search(r'^#{2,3}\s*验证', plan_text, re.M):
+        warns.append('02-plan.md 里没有找到「验证」节')
 
     print('链条：故事 %d ｜ FR %d ｜ 被任务覆盖的 FR %d'
           % (len(stories), len(fr_def), len(task_fr & set(fr_def))))

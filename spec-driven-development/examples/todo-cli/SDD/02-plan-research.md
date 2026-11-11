@@ -2,11 +2,11 @@
 
 > 角色：技术总监 ｜ 依据：02-plan.md ｜ 版本：r1 ｜ 状态：已确认
 
-## D-00 模块划分
+## D-00 模块与依赖
 
 - **问题**：按什么边界划分模块？
-- **结论**：CommandParser / TaskStore / TaskRenderer。
-- **依据**：解析、持久化、呈现的变更原因不同；TaskStore 独占写权限。
+- **结论**：CommandParser / TaskStore / TaskRenderer，见 `02-plan-contracts.md` 的「模块清单」。
+- **依据**：解析、持久化、呈现的变更原因不同；依赖方向 CommandParser → TaskStore / TaskRenderer，TaskRenderer → TaskStore。
 - **状态**：采纳
 - **验证方式**：依赖检查 + 单元测试
 - **被否决的方案**：
