@@ -23,8 +23,6 @@ metadata:
 
 ## 四步
 
-流程权威见 `workflows/main-flow.md`。
-
 | 阶段          | 角色         | 产出                          | 结束       |
 | ------------- | ------------ | ----------------------------- | ---------- |
 | 01 软件需求   | 01 需求分析师 | `01-requirements.md`        | 写完即结束 |
@@ -118,5 +116,5 @@ metadata:
 
 新会话只凭 `SDD/` 文件恢复，不靠聊天记忆。文档职责见 `references/doc-set.md`，检查见 `references/checks.md`，恢复与缺件见 `references/resume.md`。
 
-- 入口 ≤ 8 KB；角色卡 ≤ 3 KB；reference ≤ 5 KB；流程 ≤ 5 KB。
+- 入口 ≤ 8 KB；角色卡 ≤ 3 KB；reference ≤ 5 KB。
 - 改模板或脚本后：跑 `examples/todo-cli` 四道检查 + `scripts/check_skill.py` + `scripts/check_loadsets.py .`。

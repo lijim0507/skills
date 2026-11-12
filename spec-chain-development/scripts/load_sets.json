@@ -7,12 +7,6 @@
     "files": ["SKILL.md"],
     "max_bytes": 9000
   },
-  "flow.main": {
-    "description": "进入任一阶段后立即加载的流程页。",
-    "scope": "incremental",
-    "files": ["workflows/main-flow.md"],
-    "max_bytes": 6000
-  },
   "stage.00.contract": {
     "description": "建项目契约：模板一份。",
     "scope": "incremental",
@@ -50,9 +44,9 @@
     "max_bytes": 6000
   },
   "resume.fresh": {
-    "description": "新会话恢复：入口 + 流程 + 恢复协议 + 归属表 + 检查。",
+    "description": "新会话恢复：入口 + 恢复协议 + 归属表 + 检查。",
     "scope": "cumulative",
-    "include": ["bootstrap", "flow.main"],
+    "include": ["bootstrap"],
     "files": ["references/resume.md", "references/doc-set.md", "references/checks.md"],
     "max_bytes": 20000
   }
