@@ -1,5 +1,5 @@
 ---
-name: "spec-driven-development"
+name: "spec-chain-development"
 description: "规范驱动开发：00 治理定项目长期规则；01 软件需求 → 02 架构 → 03 详细设计 → 04 执行。每个阶段一个角色、一份文档，只读上游产物；写完即结束，下一阶段由人启动。用于新增功能、行为变更、修缺陷、重构、契约变更；不适用于纯问答、只读任务和不改外部可观察行为的小改。"
 metadata:
   displayName: "规范驱动开发"
