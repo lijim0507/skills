@@ -206,8 +206,8 @@ def main():
                  '模块清单', '模块契约', '追溯分析', '交接给详细设计'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
-    for name in ('架构摘要', '外部接口', '数据定义', '动态行为', '资源与调度',
-                 '异常清单', '非功能与风险', '依赖矩阵'):
+    for name in ('架构摘要', '外部接口', '数据定义', '动态行为', '资源约束',
+                 '并发与调度', '异常清单', '非功能与风险', '依赖矩阵'):
         if find_section(heads, name) is None:
             warns.append('建议补上章节：' + name)
 
@@ -273,9 +273,12 @@ def main():
         for h in heads[start + 1:]:
             if h['level'] <= 2:
                 break
-            if h['level'] != 3:
+            if h['level'] == 3:
+                # 层标题：应用层 / 中间层 / 驱动层
                 continue
-            name = clean_cell(h['title'])
+            if h['level'] != 4:
+                continue
+            name = clean_cell(lint_common.strip_number(h['title']))
             seen.append(name)
             if re.search(r'↔|→|->', name):
                 errors.append('第 %d 行模块节按调用对命名（%s）；请改成单个模块名' % (h['line'], h['title']))

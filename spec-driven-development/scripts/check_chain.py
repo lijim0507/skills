@@ -160,9 +160,12 @@ def arch_info(path):
         for h in heads[start + 1:]:
             if h['level'] <= 2:
                 break
-            if h['level'] != 3:
+            if h['level'] == 3:
+                # 层标题：应用层 / 中间层 / 驱动层
                 continue
-            name = clean_cell(h['title'])
+            if h['level'] != 4:
+                continue
+            name = clean_cell(strip_number(h['title']))
             if not name or (name.startswith('<') and name.endswith('>')):
                 continue
             text = '\n'.join(t for _, t in h['body'])
