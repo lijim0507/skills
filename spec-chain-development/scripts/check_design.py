@@ -3,7 +3,7 @@
 """详细设计检查（03-design.md，SWE.3 结构）。
 
 只查机械事实：章节是否齐全、每个架构模块在「8.2 函数设计」下有分组、
-每组有「函数设计」表（含函数 ID / 所在文件）、可追溯性引用 REQ、文档头与章节顺序。
+每组有「函数设计」表（含函数编号 / 所在文件）、可追溯性引用 REQ、文档头与章节顺序。
 函数是否够细、状态与流程是否完整由人确认前判断。
 
 用法: python check_design.py <项目>/SDD
@@ -184,8 +184,8 @@ def main():
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
 
-    # 8.2 函数设计：每个架构模块一个 #### 分组
-    unit_sec = find_section(heads, '函数设计')
+    # 8.2 软件单元：每个架构模块一个 #### 分组
+    unit_sec = find_section(heads, '软件单元', '函数设计')
     groups = {}
     if unit_sec is not None:
         start = heads.index(unit_sec)
@@ -208,8 +208,8 @@ def main():
                 rows = table_rows(body)
                 header = rows[0][1] if rows else None
                 if header is not None and any('函数' in c for c in header):
-                    if col_index(header, '函数', 'ID') is None:
-                        warns.append('%s 的函数设计表建议加「函数 ID」列' % name)
+                    if col_index(header, '函数', '编号') is None:
+                        warns.append('%s 的函数设计表建议加「函数编号」列' % name)
                     if col_index(header, '文件') is None:
                         warns.append('%s 的函数设计表建议加「所在文件」列' % name)
             for key in ('参数', '私有数据', '状态与流程', '动态特性', '错误处理', '不变量与约束'):

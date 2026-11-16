@@ -178,7 +178,7 @@ def design_modules(path):
     if not os.path.isfile(path):
         return []
     heads = sections(read_unfenced(path))
-    sec = find_section(heads, '函数设计')
+    sec = find_section(heads, '软件单元', '函数设计')
     if sec is None:
         return []
     mods = []
@@ -268,9 +268,13 @@ def main():
             warns.append('找不到 %s 文档：%s' % (label, path))
             continue
         heads = sections(read_unfenced(path))
-        expected = '变更历史' if label == '01' else '修订记录'
-        if find_section(heads, expected) is None:
-            errors.append('%s 文档缺少「%s」' % (label, expected))
+        if label == '01':
+            ok = (find_section(heads, '修订记录') is not None
+                  or find_section(heads, '变更历史') is not None)
+            if not ok:
+                errors.append('01 文档缺少「修订记录」或「变更历史」')
+        elif find_section(heads, '修订记录') is None:
+            errors.append('%s 文档缺少「修订记录」' % label)
 
     print('链条：REQ %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
           % (len(reqs), len(set(reqs) & covered_by_arch), len(set(reqs) & covered_by_task)))

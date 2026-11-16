@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """软件需求检查（01-requirements.md，SWE.1 结构）。
 
-只查机械事实：章节是否齐全、REQ 编号唯一、每条 REQ 有需求 ID / 描述 / 验证准则 / 依赖、
+只查机械事实：章节是否齐全、REQ 编号唯一、每条 REQ 有需求编号 / 描述 / 验证准则 / 依赖、
 需求清单与正文一致、追溯分析覆盖所有 REQ、正文引用存在。
 不检查需求是否可验收；那是人确认前的事。
 
@@ -173,18 +173,30 @@ def main():
     heads = sections(pairs)
     errors, warns = [], []
 
-    for name in ('概述', '软件需求', '追溯分析', '变更历史'):
+    for name in ('概述', '软件需求', '追溯分析'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
-    intro = find_section(heads, '简介')
+    if find_section(heads, '修订记录', '变更历史') is None:
+        errors.append('缺少必需章节：修订记录')
+    intro = find_section(heads, '简介', '软件需求简介')
     if intro is None:
-        warns.append('建议补上小节：2.1 简介（需求清单 / 需求间依赖关系 / 输入与输出）')
+        warns.append('建议补上小节：2.1 软件需求简介（需求清单 / 需求间依赖关系 / 输入与输出）')
     else:
-        itext = '\n'.join(t for _, t in intro['body'])
+        itext = section_text(heads, intro)
+        started = False
+        for h in heads:
+            if h is intro:
+                started = True
+                continue
+            if not started:
+                continue
+            if h['level'] <= intro['level']:
+                break
+            itext += '\n' + h['title']
         if '需求清单' not in itext:
             warns.append('「简介」建议含「需求清单」表')
-        if '需求间依赖关系' not in itext:
-            warns.append('「简介」建议含「需求间依赖关系」表')
+        if '依赖关系' not in itext:
+            warns.append('「简介」建议含「软件需求之间的依赖关系」表')
         if '输入与输出' not in itext:
             warns.append('「简介」建议含「输入与输出」表')
 
@@ -196,8 +208,10 @@ def main():
             continue
         defs[b['id']] = b
         text = '\n'.join(t for _, t in b['body'])
-        if not re.search(r'\*\*需求 ID\*\*', text):
-            errors.append('%s 缺少「**需求 ID**」行（编号 ｜ 优先级 ｜ 来源）' % b['id'])
+        if not re.search(r'\*\*需求编号\*\*', text):
+            errors.append('%s 缺少「**需求编号**」行（编号 ｜ 类别 ｜ 来源）' % b['id'])
+        if not re.search(r'\*\*需求类别\*\*', text):
+            warns.append('%s 缺少「**需求类别**」（功能性 / 非功能性 / 接口）' % b['id'])
         if not re.search(r'\*\*描述\*\*', text):
             errors.append('%s 缺少「**描述**」' % b['id'])
         if not re.search(r'\*\*验证准则\*\*', text):
@@ -210,17 +224,30 @@ def main():
     if sec is not None and not blocks:
         errors.append('「软件需求」里没有 REQ 条目（格式：**[REQ-产品-域-001] 标题**）')
 
-    # 需求清单表：在「简介」节里找含 REQ 的表头
+    # 需求清单表：在「简介」节及其子节里找含 REQ 的表头
     if intro is not None:
-        tables = all_tables(intro['body'])
+        body = list(intro['body'])
+        started = False
+        for h in heads:
+            if h is intro:
+                started = True
+                continue
+            if not started:
+                continue
+            if h['level'] <= intro['level']:
+                break
+            body.extend(h['body'])
+        tables = all_tables(body)
         list_table = None
         for tb in tables:
             if any('REQ' in c.upper() for c in tb['header']):
                 list_table = tb
                 break
         if list_table is not None:
-            if not any('优先级' in c for c in list_table['header']):
-                warns.append('「需求清单」表头建议含「优先级」列')
+            if not any('需求类别' in c for c in list_table['header']):
+                warns.append('「需求清单」表头建议含「需求类别」列')
+            if not any('来源' in c for c in list_table['header']):
+                warns.append('「需求清单」表头建议含「来源」列')
             idx = None
             for i, c in enumerate(list_table['header']):
                 if 'REQ' in c.upper():
@@ -249,7 +276,7 @@ def main():
     if not lint_common.has_role_header(raw, '需求分析师'):
         errors.append('缺少文档头：> 角色：需求分析师 ｜ 依据：…')
     warns.extend(lint_common.heading_order_warnings(
-        raw, ['概述', '软件需求', '追溯分析', '变更历史']))
+        raw, ['概述', '软件需求', '追溯分析', '交接给架构', '修订记录']))
 
     print('REQ：%d' % len(blocks))
     return report('check_requirements ' + path, errors, warns)
