@@ -12,7 +12,7 @@
 
 ### 2.1 目的
 
-把 02 的模块契约展开到可实现的程度：函数、私有数据、状态与流程、错误与不变量。
+把 02 的模块契约展开到可实现的程度：组件、接口、函数、私有数据、状态与流程、错误与不变量。
 
 ### 2.2 范围
 
@@ -23,7 +23,7 @@
 | 术语 / 缩略语 | 含义 |
 | --- | --- |
 | 单元 | 一个源代码文件 |
-| 函数 ID | 详细设计内唯一的函数编号 |
+| 函数编号 | 本文档内唯一的函数编号 |
 
 ### 2.4 参考文档
 
@@ -34,15 +34,10 @@
 
 ## 3 资源
 
-| 角色 | 姓名 | 职责 |
+| 资源 | 规格 / 说明 | 用途 |
 | --- | --- | --- |
-| 详细设计师 | 示例用户 | 本文档作者 |
-| 架构师 | 示例用户 | 架构澄清 |
-| 实现者 | 示例用户 | 下游承接 |
-
-| 相关接口 / 工具 | 说明 |
-| --- | --- |
-| Python 3 | 标准库，无第三方依赖 |
+| Python 3 | 标准库，无第三方依赖 | 运行与测试 |
+| 本地文件系统 | 可读写工作目录 | 任务持久化 |
 
 ## 4 沟通计划
 
@@ -87,14 +82,7 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 ### 6.4 外部函数定义
 
-| 函数 ID | 函数名 | 输入 | 输出 / 返回 | 错误 | 说明 |
-| --- | --- | --- | --- | --- | --- |
-| F-001 | parse | args | Command | UsageError | 解析命令行 |
-| F-002 | add | title | Todo | ValidationError | 新增任务 |
-| F-003 | list | 无 | Todo[] | 无 | 列出任务 |
-| F-004 | load | 无 | Todo[] | StoreError | 从文件读取 |
-| F-005 | save | Todo[] | 无 | StoreError | 原子写回 |
-| F-006 | render | Todo[] | string | 无 | 格式化输出 |
+无。本示例只依赖 Python 标准库，没有需要声明原型的第三方库或 SDK 函数。
 
 ## 7 软件组件设计
 
@@ -108,28 +96,43 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 ### 7.2 静态特性
 
-#### 7.2.1 函数列表
+#### 7.2.1 框架图
+
+```
+CLI 入口 (main)
+  ├─ CommandParser (src/parser.py)
+  │    └─ parse
+  ├─ TaskStore (src/store.py)
+  │    ├─ add / list
+  │    └─ load / save
+  └─ TaskRenderer (src/renderer.py)
+       └─ render
+```
+
+#### 7.2.2 函数列表
 
 | 序号 | 函数名 | 描述 | 定义组件 | 调用组件 |
 | --- | --- | --- | --- | --- |
-| 1 | parse | 解析命令行 | CommandParser | 无 |
-| 2 | add | 新增任务 | TaskStore | 无 |
-| 3 | list | 列出任务 | TaskStore | 无 |
-| 4 | load | 读取任务 | TaskStore | 无 |
-| 5 | save | 写回任务 | TaskStore | 无 |
-| 6 | render | 格式化输出 | TaskRenderer | 无 |
+| 1 | parse | 解析命令行 | CommandParser | CLI 入口 |
+| 2 | add | 新增任务 | TaskStore | CommandParser、CLI 入口 |
+| 3 | list | 列出任务 | TaskStore | CommandParser、CLI 入口 |
+| 4 | load | 读取任务 | TaskStore | CLI 入口 |
+| 5 | save | 写回任务 | TaskStore | add |
+| 6 | render | 格式化输出 | TaskRenderer | CLI 入口 |
 
-#### 7.2.2 调用树
+#### 7.2.3 函数关系
 
-- CLI 入口
-  - parse
-  - add
-    - save
-  - list
-    - render
-  - load
+```
+CLI 入口
+  ├─ parse
+  ├─ add
+  │    └─ save
+  ├─ list
+  │    └─ render
+  └─ load
+```
 
-#### 7.2.3 源代码文件清单
+#### 7.2.4 源代码文件清单
 
 | 文件名称 | 描述 | 相对路径 |
 | --- | --- | --- |
@@ -139,23 +142,37 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 ### 7.3 动态特性
 
-| 类型 | 名称 | 优先级 | 触发 / 周期 | 说明 |
-| --- | --- | --- | --- | --- |
-| 无 | — | — | — | 单进程、无并发、无中断 |
+#### 7.3.1 任务与中断
+
+无。单进程、无并发、无中断。
+
+#### 7.3.2 定时器与事件
+
+无。
+
+#### 7.3.3 调度方式
+
+主流程顺序执行；每次命令独立，无排队与共享状态。
+
+#### 7.3.4 时序图、活动图与状态图
+
+不适用。命令执行是单向顺序流程，无状态机与并发时序。
 
 ## 8 软件单元设计
 
-### 8.1 单元说明
+### 8.1 代码生成配置
 
-三个软件单元：parser.py（无状态）、store.py（持有 todos 与 path）、renderer.py（无状态）。
+不适用。Python 源码直接运行，无代码生成。
 
-### 8.2 函数设计
+### 8.2 软件单元
 
 #### 8.2.1 CommandParser
 
+**单元说明**：parser.py 无状态，只把命令行参数转成命令对象。
+
 **函数设计**
 
-| 函数 ID | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
+| 函数编号 | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-001 | parse | src/parser.py | 解析子命令与参数 | args | 命令对象 | 未知命令 → UsageError | 不读写任务数据 |
 
@@ -173,9 +190,11 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 #### 8.2.2 TaskStore
 
+**单元说明**：store.py 持有内存任务集合与持久化路径，是任务数据的唯一写者。
+
 **函数设计**
 
-| 函数 ID | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
+| 函数编号 | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-002 | add | src/store.py | 追加任务并保存 | 标题 | 任务 | 标题为空 → ValidationError | 标题先去首尾空白 |
 | F-003 | list | src/store.py | 返回全部任务 | 无 | 任务列表 | 无 | 按 id 升序 |
@@ -214,9 +233,11 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 #### 8.2.3 TaskRenderer
 
+**单元说明**：renderer.py 无状态，只做格式化，不持有任务数据。
+
 **函数设计**
 
-| 函数 ID | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
+| 函数编号 | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | F-006 | render | src/renderer.py | 格式化任务列表 | 任务列表 | 文本 | 无 | 顺序与输入一致 |
 
@@ -260,4 +281,4 @@ CommandParser 解析后调用 TaskStore.add / TaskStore.list；list 的结果交
 
 - 按 CommandParser → TaskStore → TaskRenderer 顺序实现。
 - 错误类型与提示文案见各模块错误处理。
-- 源代码文件清单见 7.2.3。
+- 源代码文件清单见 7.2.4。
