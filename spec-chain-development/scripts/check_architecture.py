@@ -206,7 +206,7 @@ def main():
                  '模块清单', '模块契约', '追溯分析', '交接给详细设计'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
-    for name in ('架构摘要', '外部接口', '数据定义', '动态行为', '资源消耗目标',
+    for name in ('架构摘要', '外部接口', '数据定义', '动态行为', '软件环境', '资源消耗目标',
                  '软件调度机制', '异常清单', '假设和约束', '依赖矩阵'):
         if find_section(heads, name) is None:
             warns.append('建议补上章节：' + name)
