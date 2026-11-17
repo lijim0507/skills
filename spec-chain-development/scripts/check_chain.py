@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""追溯链检查：REQ（01）→ 模块 / 公开接口（02）→ 函数（03）→ 任务（04）。
+"""追溯链检查：REQ（01）→ 模块 / 公开接口（02）→ 函数（03，一模块一份）→ 任务（04）。
 
-只查机械事实：每条 REQ 都有架构落点与任务落点、引用的编号存在、模块清单与详细设计一致。
+只查机械事实：每条 REQ 都有架构落点与任务落点、引用的编号存在、模块清单与详细设计文件一致。
 不检查覆盖是否“真”成立；那是人确认与验证阶段的事。
 
 用法: python check_chain.py <项目>/SDD
 """
 
+import glob
 import os
 import re
 import sys
@@ -174,31 +175,15 @@ def arch_info(path):
     return modules, cover
 
 
-def design_modules(path):
-    if not os.path.isfile(path):
-        return []
-    heads = sections(read_unfenced(path))
-    sec = find_section(heads, '软件单元', '函数设计')
-    if sec is None:
-        return []
-    mods = []
-    started = False
-    for h in heads:
-        if h is sec:
-            started = True
-            continue
-        if not started:
-            continue
-        if h['level'] <= sec['level']:
-            break
-        if h['level'] != sec['level'] + 1:
-            continue
-        name = clean_cell(strip_number(h['title']))
-        if name in NON_MODULE:
-            continue
-        if name and not (name.startswith('<') and name.endswith('>')):
-            mods.append(name)
-    return mods
+def design_files(base):
+    """一个模块一份：03-design-<模块>.md，模块名从文件名取。"""
+    files = sorted(glob.glob(os.path.join(base, '03-design-*.md')))
+    out = []
+    for path in files:
+        name = os.path.basename(path)
+        if name.startswith('03-design-') and name.endswith('.md'):
+            out.append((name[len('03-design-'):-len('.md')], path))
+    return out
 
 
 def task_reqs(path):
@@ -221,12 +206,12 @@ def main():
 
     spec = os.path.join(base, '01-requirements.md')
     arch = os.path.join(base, '02-architecture.md')
-    design = os.path.join(base, '03-design.md')
     impl = os.path.join(base, '04-implementation.md')
 
     reqs = parse_reqs(spec)
     modules, cover = arch_info(arch)
-    dmods = design_modules(design)
+    dmods = design_files(base)
+    dnames = {m for m, _ in dmods}
     trefs = task_reqs(impl)
 
     if not reqs:
@@ -234,7 +219,7 @@ def main():
     if not modules:
         errors.append('没读到 02-architecture.md 的模块清单')
     if not dmods:
-        errors.append('没读到 03-design.md 的模块小节')
+        errors.append('没读到 03-design-<模块>.md（一个模块一份）')
     if not trefs:
         errors.append('没读到 04-implementation.md 的任务行')
 
@@ -256,14 +241,14 @@ def main():
     for rid in sorted(set(reqs) - covered_by_task):
         errors.append('%s 没有被任何任务覆盖（链条断了）' % rid)
 
-    for name in sorted(set(dmods) - modules):
-        errors.append('详细设计里有架构清单中没有的模块：%s' % name)
-    for name in sorted(modules - set(dmods)):
-        errors.append('架构模块没有详细设计小节：%s' % name)
+    for name in sorted(dnames - modules):
+        errors.append('详细设计有架构清单中没有的模块：%s' % name)
+    for name in sorted(modules - dnames):
+        errors.append('架构模块没有详细设计文件：03-design-%s.md' % name)
     for name in sorted(set(cover) - modules):
         errors.append('模块契约里有模块清单中没有的模块：%s' % name)
 
-    for label, path in (('01', spec), ('02', arch), ('03', design), ('04', impl)):
+    for label, path in (('01', spec), ('02', arch), ('04', impl)):
         if not os.path.isfile(path):
             warns.append('找不到 %s 文档：%s' % (label, path))
             continue
@@ -275,6 +260,11 @@ def main():
                 errors.append('01 文档缺少「修订记录」或「变更历史」')
         elif find_section(heads, '修订记录') is None:
             errors.append('%s 文档缺少「修订记录」' % label)
+
+    for _, path in dmods:
+        heads = sections(read_unfenced(path))
+        if find_section(heads, '修订记录') is None:
+            errors.append('%s 缺少「修订记录」' % os.path.basename(path))
 
     print('链条：REQ %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
           % (len(reqs), len(set(reqs) & covered_by_arch), len(set(reqs) & covered_by_task)))

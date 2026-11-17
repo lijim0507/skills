@@ -6,7 +6,7 @@
 
 ## READ
 
-- `SDD/00-contract.md`、`SDD/03-design.md`
+- `SDD/00-contract.md`、`SDD/03-design-<模块>.md`（每模块一份）
 - 01 / 02 只作背景；设计缺口就回交 03
 - `templates/04-implementation.md`
 

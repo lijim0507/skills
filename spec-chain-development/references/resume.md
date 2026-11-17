@@ -32,7 +32,7 @@
 
 ## 覆盖与 git
 
-文档路径固定（`SDD/00-contract.md`、`01-requirements.md`、`02-architecture.md`、`03-design.md`、`04-implementation.md`），每轮覆盖。历史只在 git 里：覆盖前必须已经提交，否则上一轮的任务勾选和证据永久丢失。
+文档路径固定（`SDD/00-contract.md`、`01-requirements.md`、`02-architecture.md`、`03-design-<模块>.md`（每模块一份）、`04-implementation.md`），每轮覆盖。历史只在 git 里：覆盖前必须已经提交，否则上一轮的任务勾选和证据永久丢失。
 
 ## 未决项
 

@@ -1,6 +1,6 @@
 # 04-implementation.md —— Todo CLI 执行编写
 
-> 角色：实现者 ｜ 依据：03-design.md ｜ 状态：已确认
+> 角色：实现者 ｜ 依据：03-design-<模块>.md（每模块一份）｜ 状态：已确认
 
 ## 执行说明
 
@@ -28,7 +28,7 @@
 - **验收人**：示例验收人
 - **目标**：解析 add 与 list 子命令及其参数。
 - **范围**：src/parser.py。
-- **输入**：03-design.md 的 CommandParser 函数设计。
+- **输入**：03-design-CommandParser.md 的函数设计。
 - **产出**：parse 函数与 UsageError 类型。
 - **完成判据（DoD）**：未知命令与缺参数都返回 UsageError；正常输入返回命令对象。
 - **验收判据**：REQ-TC-ADD-001 的子条目在正常与空标题输入下成立。
@@ -48,7 +48,7 @@
 - **验收人**：示例验收人
 - **目标**：新增与列出任务，并原子读写 JSON 文件。
 - **范围**：src/store.py。
-- **输入**：03-design.md 的 TaskStore 函数设计。
+- **输入**：03-design-TaskStore.md 的函数设计。
 - **产出**：add / list / load / save 四个函数。
 - **完成判据（DoD）**：标题为空返回 ValidationError；文件损坏返回 StoreError；写入失败不破坏原文件。
 - **验收判据**：REQ-TC-ADD-001 的创建与空标题子条目成立。
@@ -68,7 +68,7 @@
 - **验收人**：示例验收人
 - **目标**：按添加顺序输出任务列表。
 - **范围**：src/renderer.py。
-- **输入**：03-design.md 的 TaskRenderer 函数设计。
+- **输入**：03-design-TaskRenderer.md 的函数设计。
 - **产出**：render 函数。
 - **完成判据（DoD）**：空列表输出空提示；非空列表带编号与完成状态；顺序稳定。
 - **验收判据**：REQ-TC-LIST-001 的三个子条目成立。
@@ -92,4 +92,4 @@
 
 | 轮次 | 日期 | 依据什么 | 为什么改 | 确认人 |
 | --- | --- | --- | --- | --- |
-| r1 | 2026-11-11 | 03-design r1 | 建档 | 示例用户 |
+| r1 | 2026-11-11 | 03-design-<模块>.md r1 | 建档 | 示例用户 |

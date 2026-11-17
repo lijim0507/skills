@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""详细设计检查（03-design.md，SWE.3 结构）。
+"""详细设计检查（03-design-<模块>.md，SWE.3 结构，一个模块一份）。
 
-只查机械事实：章节是否齐全、每个架构模块在「8.2 函数设计」下有分组、
-每组有「函数设计」表（含函数编号 / 所在文件）、可追溯性引用 REQ、文档头与章节顺序。
+只查机械事实：每个架构模块是否有对应文件、章节是否齐全、
+「8.2 软件单元」下是否有单元分组、每组有「函数设计」表（含函数编号 / 所在文件）、
+可追溯性引用 REQ、文档头与章节顺序。
 函数是否够细、状态与流程是否完整由人确认前判断。
 
 用法: python check_design.py <项目>/SDD
 """
 
+import glob
 import os
 import re
 import sys
@@ -18,6 +20,9 @@ FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
 REQ_IN_TEXT = re.compile(r'\b(' + REQ_ID + r')\b')
 NON_UNIT = {'单元说明', '函数设计'}
+DESIGN_GLOB = '03-design-*.md'
+DESIGN_PREFIX = '03-design-'
+DESIGN_SUFFIX = '.md'
 
 
 def read_unfenced(path):
@@ -160,31 +165,29 @@ def arch_modules(path):
     return mods
 
 
-def main():
-    if len(sys.argv) < 2:
-        print(__doc__.strip())
-        return 2
-    base = sys.argv[1]
-    arch = os.path.join(base, '02-architecture.md')
-    path = os.path.join(base, '03-design.md')
-    errors, warns = [], []
+def design_files(base):
+    return sorted(glob.glob(os.path.join(base, DESIGN_GLOB)))
 
-    if not os.path.isfile(path):
-        errors.append('找不到 03-design.md')
-        return report('check_design ' + base, errors, warns)
 
+def module_from_file(path):
+    name = os.path.basename(path)
+    if name.startswith(DESIGN_PREFIX) and name.endswith(DESIGN_SUFFIX):
+        return name[len(DESIGN_PREFIX):-len(DESIGN_SUFFIX)]
+    return None
+
+
+def check_one(path, errors, warns):
+    """检查一个 03 文件，返回软件单元数量。"""
     pairs = read_unfenced(path)
     heads = sections(pairs)
-    modules = arch_modules(arch)
-    if not modules:
-        warns.append('没有从 02-architecture.md 读到模块清单，无法核对覆盖')
+    units = 0
 
     for name in ('修订记录', '简介', '资源', '沟通计划', '软件组件描述',
                  '接口', '软件组件设计', '软件单元设计', '可追溯性', '附录'):
         if find_section(heads, name) is None:
-            errors.append('缺少必需章节：' + name)
+            errors.append('%s 缺少必需章节：%s' % (os.path.basename(path), name))
 
-    # 8.2 软件单元：每个架构模块一个 #### 分组
+    # 8.2 软件单元：每个单元一个 #### 分组
     unit_sec = find_section(heads, '软件单元', '函数设计')
     groups = {}
     if unit_sec is not None:
@@ -198,58 +201,100 @@ def main():
             if not name or norm(name) in NON_UNIT:
                 continue
             if name in groups:
-                errors.append('函数设计分组重复：%s' % name)
+                errors.append('%s 的软件单元分组重复：%s' % (os.path.basename(path), name))
             groups[name] = h
             body = module_body(pairs, heads, h)
             text = '\n'.join(t for _, t in body)
             if '函数设计' not in text:
-                errors.append('%s 缺少「函数设计」表' % name)
+                errors.append('%s 的 %s 缺少「函数设计」表' % (os.path.basename(path), name))
             else:
                 rows = table_rows(body)
                 header = rows[0][1] if rows else None
                 if header is not None and any('函数' in c for c in header):
                     if col_index(header, '函数', '编号') is None:
-                        warns.append('%s 的函数设计表建议加「函数编号」列' % name)
+                        warns.append('%s 的 %s 函数设计表建议加「函数编号」列'
+                                     % (os.path.basename(path), name))
                     if col_index(header, '文件') is None:
-                        warns.append('%s 的函数设计表建议加「所在文件」列' % name)
+                        warns.append('%s 的 %s 函数设计表建议加「所在文件」列'
+                                     % (os.path.basename(path), name))
             for key in ('参数', '私有数据', '状态与流程', '动态特性', '错误处理', '不变量与约束'):
                 if key not in text:
-                    warns.append('%s 建议补上「%s」' % (name, key))
+                    warns.append('%s 的 %s 建议补上「%s」'
+                                 % (os.path.basename(path), name, key))
             if not re.search(r'\|', text):
-                warns.append('%s 没有表格（函数设计至少应是一张表）' % name)
+                warns.append('%s 的 %s 没有表格（函数设计至少应是一张表）'
+                             % (os.path.basename(path), name))
 
-        for name in modules:
-            if name not in groups:
-                errors.append('函数设计缺少模块分组：#### %s（在 8.2 函数设计下）' % name)
+    units += len(groups)
 
     # 可追溯性：需求 → 详设 表应引用 REQ
     trace = find_section(heads, '可追溯性')
     if trace is not None:
         ttext = section_text(heads, trace)
         if not REQ_IN_TEXT.findall(ttext):
-            warns.append('「可追溯性」建议列出 需求 → 详设 的映射')
+            warns.append('%s 的「可追溯性」建议列出 需求 → 详设 的映射'
+                         % os.path.basename(path))
     else:
-        errors.append('缺少「可追溯性」节')
+        errors.append('%s 缺少「可追溯性」节' % os.path.basename(path))
 
     # 附录：数据质量 / 交接给实现
     appendix = find_section(heads, '附录')
     if appendix is not None:
         atext = '\n'.join(t for _, t in appendix['body'])
         if '数据质量' not in atext:
-            warns.append('「附录」建议含「数据质量」')
+            warns.append('%s 的「附录」建议含「数据质量」' % os.path.basename(path))
         if '交接给实现' not in atext:
-            warns.append('「附录」建议含「交接给实现」')
+            warns.append('%s 的「附录」建议含「交接给实现」' % os.path.basename(path))
 
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
-        errors.append('第 %d 行：%s' % (ln, msg))
+        errors.append('%s 第 %d 行：%s' % (os.path.basename(path), ln, msg))
     if not lint_common.has_role_header(raw, '详细设计师'):
-        errors.append('缺少文档头：> 角色：详细设计师 ｜ 依据：…')
+        errors.append('%s 缺少文档头：> 角色：详细设计师 ｜ 依据：…' % os.path.basename(path))
     warns.extend(lint_common.heading_order_warnings(
         raw, ['修订记录', '简介', '资源', '沟通计划', '软件组件描述', '接口',
               '软件组件设计', '软件单元设计', '可追溯性', '附录']))
+    return units
 
-    print('详细设计模块：%d / %d' % (len([m for m in modules if m in groups]), len(modules)))
+
+def main():
+    if len(sys.argv) < 2:
+        print(__doc__.strip())
+        return 2
+    base = sys.argv[1]
+    arch = os.path.join(base, '02-architecture.md')
+    errors, warns = [], []
+
+    files = design_files(base)
+    if not files:
+        errors.append('找不到 03-design-<模块>.md（一个模块一份）')
+        return report('check_design ' + base, errors, warns)
+
+    modules = arch_modules(arch)
+    if not modules:
+        warns.append('没有从 02-architecture.md 读到模块清单，无法核对覆盖')
+
+    seen = {}
+    total_units = 0
+    for path in files:
+        mod = module_from_file(path)
+        if mod is None:
+            warns.append('文件命名不符合 03-design-<模块>.md：%s' % os.path.basename(path))
+            continue
+        if mod in seen:
+            errors.append('同一模块有多份详细设计：%s / %s'
+                          % (os.path.basename(seen[mod]), os.path.basename(path)))
+        seen[mod] = path
+        total_units += check_one(path, errors, warns)
+
+    for name in modules:
+        if name not in seen:
+            errors.append('架构模块没有详细设计文件：03-design-%s.md' % name)
+    for name in sorted(set(seen) - set(modules)):
+        errors.append('详细设计有架构清单中没有的模块：%s' % name)
+
+    print('详细设计：模块 %d / %d ｜ 文件 %d ｜ 软件单元 %d'
+          % (len(set(modules) & set(seen)), len(modules), len(seen), total_units))
     return report('check_design ' + base, errors, warns)
 
 
