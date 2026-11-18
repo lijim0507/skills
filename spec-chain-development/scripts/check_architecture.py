@@ -202,7 +202,7 @@ def main():
     heads = sections(pairs)
     reqs = req_defs(spec)
 
-    for name in ('修订记录', '简介', '资源', '沟通计划', '软件架构设计',
+    for name in ('简介', '资源', '沟通计划', '软件架构设计',
                  '模块清单', '模块契约', '追溯分析', '交接给详细设计'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
@@ -332,7 +332,7 @@ def main():
     if not lint_common.has_role_header(raw, '架构师'):
         errors.append('缺少文档头：> 角色：架构师 ｜ 依据：…')
     warns.extend(lint_common.heading_order_warnings(
-        raw, ['修订记录', '简介', '资源', '沟通计划', '软件架构设计',
+        raw, ['简介', '资源', '沟通计划', '软件架构设计',
               '模块契约', '追溯分析', '交接给详细设计']))
 
     print('模块：%d ｜ 覆盖 REQ 的模块：%d' % (len(modules), covered))

@@ -137,7 +137,7 @@ def main():
     heads = sections(pairs)
     errors, warns = [], []
 
-    for name in ('任务', '覆盖映射', '修订记录'):
+    for name in ('任务', '覆盖映射'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
     for name in ('执行说明', '执行批次', '任务卡'):
@@ -210,7 +210,7 @@ def main():
     if not lint_common.has_role_header(raw, '实现者'):
         errors.append('缺少文档头：> 角色：实现者 ｜ 依据：…')
     warns.extend(lint_common.heading_order_warnings(
-        raw, ['执行说明', '执行批次', '任务', '任务卡', '覆盖映射', '修订记录']))
+        raw, ['执行说明', '执行批次', '任务', '任务卡', '覆盖映射']))
 
     print('任务：%d ｜ 任务卡：%d' % (len(tasks), len(cards)))
     return report('check_implementation ' + path, errors, warns)

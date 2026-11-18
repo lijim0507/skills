@@ -251,17 +251,6 @@ def main():
     for label, path in (('01', spec), ('02', arch), ('04', impl)):
         if not os.path.isfile(path):
             warns.append('找不到 %s 文档：%s' % (label, path))
-            continue
-        if label == '01':
-            continue
-        heads = sections(read_unfenced(path))
-        if find_section(heads, '修订记录') is None:
-            errors.append('%s 文档缺少「修订记录」' % label)
-
-    for _, path in dmods:
-        heads = sections(read_unfenced(path))
-        if find_section(heads, '修订记录') is None:
-            errors.append('%s 缺少「修订记录」' % os.path.basename(path))
 
     print('链条：REQ %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
           % (len(reqs), len(set(reqs) & covered_by_arch), len(set(reqs) & covered_by_task)))

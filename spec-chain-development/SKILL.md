@@ -5,7 +5,7 @@ metadata:
   displayName: "规范驱动开发"
   updatedAt: "2026-11-18T00:00:00.000Z"
   author: lijingyuan
-  version: "4.0.5"
+  version: "4.0.6"
   short-description: "四阶段、四角色、四文档"
   tags: [sdd, spec, workflow, role-card]
 ---

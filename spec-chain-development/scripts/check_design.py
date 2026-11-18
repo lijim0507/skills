@@ -182,7 +182,7 @@ def check_one(path, errors, warns):
     heads = sections(pairs)
     units = 0
 
-    for name in ('修订记录', '简介', '资源', '沟通计划', '软件组件描述',
+    for name in ('简介', '资源', '沟通计划', '软件组件描述',
                  '接口', '软件组件设计', '软件单元设计', '可追溯性', '附录'):
         if find_section(heads, name) is None:
             errors.append('%s 缺少必需章节：%s' % (os.path.basename(path), name))
@@ -252,7 +252,7 @@ def check_one(path, errors, warns):
     if not lint_common.has_role_header(raw, '详细设计师'):
         errors.append('%s 缺少文档头：> 角色：详细设计师 ｜ 依据：…' % os.path.basename(path))
     warns.extend(lint_common.heading_order_warnings(
-        raw, ['修订记录', '简介', '资源', '沟通计划', '软件组件描述', '接口',
+        raw, ['简介', '资源', '沟通计划', '软件组件描述', '接口',
               '软件组件设计', '软件单元设计', '可追溯性', '附录']))
     return units
 
