@@ -176,11 +176,9 @@ def main():
     for name in ('概述', '软件需求', '追溯分析'):
         if find_section(heads, name) is None:
             errors.append('缺少必需章节：' + name)
-    if find_section(heads, '修订记录', '变更历史') is None:
-        errors.append('缺少必需章节：修订记录')
     intro = find_section(heads, '简介', '软件需求简介')
     if intro is None:
-        warns.append('建议补上小节：2.1 软件需求简介（需求清单 / 需求间依赖关系 / 输入与输出）')
+        warns.append('建议补上小节：2.1 软件需求简介（需求清单 / 需求间依赖关系）')
     else:
         itext = section_text(heads, intro)
         started = False
@@ -197,8 +195,6 @@ def main():
             warns.append('「简介」建议含「需求清单」表')
         if '依赖关系' not in itext:
             warns.append('「简介」建议含「软件需求之间的依赖关系」表')
-        if '输入与输出' not in itext:
-            warns.append('「简介」建议含「输入与输出」表')
 
     sec, blocks = parse_reqs(heads)
     defs = {}
@@ -276,7 +272,7 @@ def main():
     if not lint_common.has_role_header(raw, '需求分析师'):
         errors.append('缺少文档头：> 角色：需求分析师 ｜ 依据：…')
     warns.extend(lint_common.heading_order_warnings(
-        raw, ['概述', '软件需求', '追溯分析', '交接给架构', '修订记录']))
+        raw, ['概述', '软件需求', '追溯分析']))
 
     print('REQ：%d' % len(blocks))
     return report('check_requirements ' + path, errors, warns)

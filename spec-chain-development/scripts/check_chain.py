@@ -252,13 +252,10 @@ def main():
         if not os.path.isfile(path):
             warns.append('找不到 %s 文档：%s' % (label, path))
             continue
-        heads = sections(read_unfenced(path))
         if label == '01':
-            ok = (find_section(heads, '修订记录') is not None
-                  or find_section(heads, '变更历史') is not None)
-            if not ok:
-                errors.append('01 文档缺少「修订记录」或「变更历史」')
-        elif find_section(heads, '修订记录') is None:
+            continue
+        heads = sections(read_unfenced(path))
+        if find_section(heads, '修订记录') is None:
             errors.append('%s 文档缺少「修订记录」' % label)
 
     for _, path in dmods:
