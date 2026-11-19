@@ -1,274 +1,463 @@
-# 02-architecture.md —— <项目 / 特性名> 软件架构设计规范
+> 角色：架构师 ｜ 依据：01-requirements.md ｜ 版本：v1.0 ｜ 状态：待确认
 
-> 角色：架构师 ｜ 依据：01-requirements.md ｜ 版本：r1 ｜ 状态：待确认
-> 本文件按 SWE.2 软件架构设计组织：简介 → 资源 → 沟通计划 → 软件架构设计 → 模块契约 → 生产运行 → 追溯分析。
-> 只写实现判断：模块如何切、依赖朝哪走、模块间如何交互、跨越模块的资源与风险。
-> 算法与函数细节写在 `03-design-<模块>.md`（每模块一份）；关键取舍写在 4.1 架构摘要里。
-> 每条 REQ 必须在这里找到落点（模块 / 公开接口）；找不到就回交 01，不在架构层改需求。
+# 1 修订记录/Revision record
 
-**变更历史**
+1．	版本命名规则，vX.Y，如初版发布为v1.0
+Version naming rules, vX.Y. For example, the first version released is v1.0.
 
-| 版本 | 状态 | 变更内容 | 变更日期 | 更改人 | 批准人 |
-| --- | --- | --- | --- | --- | --- |
-| r1 | 草稿 | 建档 | <YYYY-MM-DD> | <名字> | <名字> |
+2．	文档内容变更，Date应为变更日期；版本号X维持不变，Y增加1，如v1.1；
+If the content of the document has changed, Date shall be the date of the change; and the version number X shall remain unchanged and Y shall increase by 1, such as v1.1.
 
-## 1 简介
+3．	文档内容通过批准，Date为 批准日期；版本号X增加1，Y降为0，如v2.0；
+If the document update is approved, Date shall be the approval date; version number X shall be increased by 1, and Y shall be decreased to 0, e.g. v2.0.
 
-### 1.1 目的
+| 版本 | 状态 | 变更内容 | 变更日期            | 更改人 | 批准人 |
+| ---- | ---- | -------- | ------------------- | ------ | ------ |
+| r1   | 草稿 | 建档     | <YYYY-MM-DD></yyyy> | <名字> | <名字> |
 
-<这份架构设计为什么存在、给谁看。>
+# 2 简介/INTRODUCTION
 
-### 1.2 范围
+<这里简要地介绍要描述的对象，包括文件的目的、背景和文件所服务的读者。>
+< This process briefly introduces the object to be described, including the purpose of document the background and the readers served by the document. >
 
-<覆盖哪个产品 / 版本 / 子系统；明确不覆盖什么。>
+## 2.1 目的/Purpose
 
-### 1.3 术语和缩略语
+<详细描述本文件的目的。>
+<Describe the purpose of this document in detail.></describe>
 
-| 术语 / 缩略语 | 含义 |
-| --- | --- |
-| <术语> | <定义> |
+本文档描述了软件架构设计，主要目的是为了描述：软件描述、外部接口、软件分解、动态行为、资源消耗目标。确保产品软件架构设计符合A-SPICE软件开发以及ISO 26262系列标准要求内容和目标，以指导后续软件的开发，包括软件单元设计和实现。
 
-### 1.4 参考文档
+This document describes the software architecture design with the main purpose of describing: software description, external interfaces, software decomposition, dynamic behavior, and resource consumption goals.
 
-| 文档 | 版本 | 说明 |
-| --- | --- | --- |
-| 01-requirements.md | r1 | 软件需求 |
+## 2.2 范围/Scope
 
-## 2 资源
+＜详细描述本文件的范围。＞
+＜Detailed describe the scope of this document.＞
 
-> 软件运行与开发所依赖的环境基线。软件自身对这些资源的消耗上限在「4.5 资源消耗目标」。
-> 人员与项目管理不写本文档；工具链与环境属于 2.2 软件环境。
+e.g.,
 
-### 2.1 硬件资源
+This document only applies to software architectural design process of #Project.
 
-| 资源 | 规格 / 容量 | 用途 | 约束 |
-| --- | --- | --- | --- |
-| <MCU / CPU> | <主频 / 核数 / 位宽> | <运行什么> | <实时性 / 功耗 / 安全> |
-| <内存 / 堆栈> | <容量> | <运行时数据> | <上限 / 分配策略> |
-| <Flash / ROM> | <容量> | <代码 / 常量> | <预算 / 升级方式> |
-| <总线 / 外设> | <速率 / 通道 / 地址> | <连接什么> | <时序 / 中断 / 独占> |
+本文档仅适用于[项目]中的软件架构设计流程。
 
-### 2.2 软件环境
+## 2.3 术语、定义和缩略语/ Terms, definitions and Abbreviations
 
-| 资源 | 版本 / 规格 | 用途 | 约束 |
-| --- | --- | --- | --- |
-| <OS / RTOS> | <名称 / 版本> | <提供什么> | <许可 / 实时性 / 依赖> |
-| <运行时 / SDK> | <名称 / 版本> | <构建或运行依赖> | <版本锁定 / 兼容性> |
-| <依赖库> | <名称 / 版本> | <被谁使用> | <许可 / 升级策略> |
-| <构建工具链> | <名称 / 版本> | <构建 / 测试> | <版本锁定 / 可复现> |
+<列出文件中出现的所有缩略语。>
+<List all abbreviations that appear in the document.></list>
 
-### 2.3 外部系统与接口（可选）
+| 缩略语Abbreviation | 解释Explanation |
+| ------------------ | --------------- |
+| PM                 | Project Manager |
+|                    |                 |
 
-| 系统 / 接口 | 协议 / 形式 | 用途 | 约束 |
-| --- | --- | --- | --- |
-| <传感器 / 执行器 / 上位机 / 云服务> | <协议 / 接口形式> | <被哪个模块使用> | <时序 / 许可 / 依赖> |
+## 2.4 参考/References
 
-没有外部系统时写「无」。
+<列出所有参考文件及其位置。>
+<List all reference documents and their locations.></list>
 
-## 3 沟通计划
+| No. | 工作产品名 Work Product Name | 版本 Version | 发布日期 Release date | 位置 Location |
+| --- | ---------------------------- | ------------ | --------------------- | ------------- |
+| 1   | Project Plan                 |              |                       | …\man.3      |
+|     |                              |              |                       |               |
+|     |                              |              |                       |               |
+|     |                              |              |                       |               |
+|     |                              |              |                       |               |
 
-| 会议 / 评审 | 参与人 | 频率 | 输出 |
-| --- | --- | --- | --- |
-| 架构评审 | 架构师、需求分析师、详细设计师 | 每次变更 | 评审记录 / 修改项 |
+# 3 资源/RESOURCE
 
-## 4 软件架构设计
+参见“软件资源管理表”中SWE.2章节内容
 
-### 4.1 架构摘要（软件描述）
+# 4 沟通计划/COMMUNICATION PLAN
 
-<一段话：这个架构怎么满足需求，关键取舍是什么。>
+参见“软件沟通管理计划”中SWE.2章节内容
 
-### 4.2 外部接口
+# 5 软件架构设计/ SOFTWARE ARCHITECTURAL DESIGN
 
-> 把本软件所运行的系统元素（ECU / MCU / 进程 / 设备）看成黑盒：这里写黑盒对外接收与输出的信息 / 数据，以及承载它们的协议与介质。不是软件内部模块之间的接口（组件间接口在 4.3.3）。
-> 外部接口的形状来自 01 的 2.2 交互框图，这里只写实现侧的接口约束；大小、频率、质量、信息列按需填写，没有就写「—」。
+<作为软件架构的顶层设计，本章用于规范和指导软件架构设计工作。>
+<As the top-level design of software architecture, this chapter is used to standardize and guide the software architectural design work.>
 
-| 接口编号 | 描述 | 发送方 | 接收方 | 格式 | 大小 | 频率 | 质量 | 信息 | 处理模块 | 约束条件 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| IF-EXT-001 | <接口用途> | <外部系统> | <本软件> | <协议 / 文件 / 命令行> | <字节数> | <周期 / 事件> | <校验 / 等级> | <消息内容> | <本软件承接模块> | <时序 / 安全> |
+## 5.1 软件描述/Software Description
 
-### 4.3 软件分解
+<本章主要用于描述软件的主要功能>。
+<This chapter is mainly used to describe the main function of software.></this>
 
-#### 4.3.1 数据定义
+## 5.2 外部接口/External Interface
 
-> 全局数据与共享数据：谁定义、谁使用、约束是什么。没有就写「无」。
+<本章主要用于描述微型控制单元的外部接口。>
+<This chapter is mainly used to describe the external interfaces of the micro control unit. ></this>.
 
-| No. | 数据名称 | 使用范围 | 说明 |
-| --- | --- | --- | --- |
-| D-001 | <数据名> | <模块 A、模块 B> | <类型、生命周期、归属> |
+## 5.3 软件分解/Software Decomposition
 
-#### 4.3.2 模块清单
+<本章用于描述软件架构的分解结构。它可以包括以下几个方面。如： This chapter describes the breakdown structure of software architecture. It can include the following aspects. Such as
 
-> 本表是模块的唯一清单：职责、层、依赖都在这里。写权限与接口细节见「6 模块契约」。
-> 依赖只写调用方向；跨模块的允许 / 限制 / 不允许见「依赖矩阵」。
-> 层：应用层 / 中间层 / 驱动层；不分层写「无」。
+层描述和软件层之间的关系。The relationship between the layer description and the software layer
 
-| 模块 | 一句话职责 | 层 | 依赖（调用方向） |
-| --- | --- | --- | --- |
-| <模块 A> | <职责 A> | <应用层 / 中间层 / 驱动层 / 无> | <模块 B / 无> |
-| <模块 B> | <职责 B> | <应用层 / 中间层 / 驱动层 / 无> | 无 |
+各层上的组件部署。Component deployment at each layer
 
-#### 4.3.3 组件间接口设计
+软件组件之间的关系（低至最低级别）。> Relationships between software components (down to the lowest level)
 
-> 跨组件的内部接口：谁发给谁、格式多大、频率多高、有什么约束。
-> 本表是跨模块接口总表；每个模块的接口细节（输入 / 输出 / 错误 / 调用上下文）见「6 模块契约」，同一细节只写一处。
-> 行标识用函数名（或消息名），与 7 的公开接口同名，两边直接对上；一个函数一行。
+<This chapter is used to describe the decomposition structure of software architecture. It could include the following aspects: E.g., 本章描述了软件架构的分解结构。它可以包括以下几个方面
 
-| 函数名 / 消息 | 描述 | 发送方 | 接收方 | 格式 | 大小 | 频率 | 约束条件 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| <函数名 / 消息名> | <接口用途> | <模块 A> | <模块 B> | <函数调用 / 消息 / 共享内存> | <字节数> | <周期 / 事件> | <时序 / 背压 / 安全> |
+Layer description and relationship between software layers. 层描述和软件层之间的关系
 
-#### 4.3.4 依赖矩阵
+Components deployment on each layer. 每层的组件部署
 
-> 行组件对列组件的依赖：● 允许使用，○ 限制使用，— 不允许使用。矩阵必须与「模块清单」的依赖一致。
-> 没有矩阵就写「无」。
+Relationship between software components(down to the lowest level). > 软件组件之间的关系(一直到最底层)
 
-| 模块 | <模块 A> | <模块 B> |
-| --- | --- | --- |
-| <模块 A> | — | ● |
-| <模块 B> | — | — |
+层级结构图Layer structure view:
 
-### 4.4 动态行为
+组件结构图Components structure view:
 
-> 动态行为讲产品整体的时序：外部操作或事件发生时，产品整体处于什么状态、怎么迁移，外部能看到什么。
-> 启动、停止、工作状态、异常恢复都要写到；按场景写，不按模块写——模块内部的调用顺序不属于这里。
+### 5.3.1 数据定义
 
-| 场景 | 外部操作或事件 | 产品整体状态变化 | 外部可见结果 |
-| --- | --- | --- | --- |
-| <场景名> | <用户操作 / 外部事件 / 上电 / 断电 / 超时> | <迁移前 → 迁移后；状态不变就写「不变」> | <提示 / 灯 / 屏 / 报文 / 返回码 / 无> |
+定义软件使用的全局数据
 
-### 4.5 资源消耗目标
+| No. | 数据名称 | 使用范围（使用该数据的组件） |
+| --- | -------- | ---------------------------- |
+|     |          |                              |
+|     |          |                              |
+|     |          |                              |
+|     |          |                              |
 
-> 软件资源的上限与预算：存储、内存、CPU 时间、带宽、文件大小等。硬件基线见「2.1 硬件资源」。
-> 没有可量化目标就写「无」。
+### 5.3.2 组件间的接口设计
 
-| 资源 | 上限 / 预算 | 依据 | 超限后果 | 验证 |
-| --- | --- | --- | --- | --- |
-| <存储 / 内存 / CPU 时间 / 带宽 / 文件大小> | <上限或目标> | <需求 / 平台 / 成本> | <降级 / 拒绝 / 告警> | <测量方法> |
+| 接口ID | 描述 | 发送方 | 接收方 | 格式 | 大小 | 分辨率 | 质量 | 信息 | 频率 | 约束条件 |
+| ------ | ---- | ------ | ------ | ---- | ---- | ------ | ---- | ---- | ---- | -------- |
+|        |      |        |        |      |      |        |      |      |      |          |
+|        |      |        |        |      |      |        |      |      |      |          |
+|        |      |        |        |      |      |        |      |      |      |          |
 
-### 4.6 软件调度机制
+### 5.3.3 组件间的依赖关系
 
-> 只回答一件事：并发与事件怎么分配。资源预算见「4.5 资源消耗目标」。
+|       | 组件1 | 组件2 | 组件3 | 组件4 | …… |  |
+| ----- | ----- | ----- | ----- | ----- | ---- | - |
+| 组件1 |       | ●    | ○    | ○    |      |  |
+| 组件2 | --    |       | ○    | ●    |      |  |
+| 组件3 | --    | ●    |       |       |      |  |
+| 组件4 | --    | --    | ●    |       |      |  |
+| ……  |       |       |       |       |      |  |
 
-**并发模型**：<单线程 / 事件循环 / 线程池 / RTOS 任务 / 多进程>，因为 <原因>。
+●允许使用
 
-| 执行流 | 职责 | 优先级 / 并发度 | 时序约束 | 共享状态与同步 |
-| --- | --- | --- | --- | --- |
-| <执行流> | <做什么> | <优先级 / 并发数 / 无> | <截止时间 / 顺序 / 无> | <锁 / 队列 / 无共享> |
+○限制使用
 
-**同步与背压**：<锁 / 队列 / 信号量 / 无共享 / 无>。
+--不允许使用
 
-### 4.7 异常清单
+### 5.3.4 应用层组件定义Application Layer Component Definition
 
-> 系统级异常：谁检测、怎么处理、对哪条 REQ 有影响。没有就写「无」。
+<本章主要描述应用层组件的定义。>
+<This chapter mainly describes the Application Layer Component definition. ></this>
 
-| 异常编号 | 异常代码 | 异常名称 | 关联组件 | 描述 | 措施 |
-| --- | --- | --- | --- | --- | --- |
-| EX-001 | <代码> | <异常名> | <模块> | <触发条件> | <恢复 / 降级 / 上报 / 重启> |
+#### 5.3.4.1 组件XXX定义/Component xxx Definition
 
-### 4.8 假设和约束
+**覆盖需求**：SSR001
 
-> 不属于单条 REQ 的质量目标、假设与风险。没有就写「无」。
+<本节定义了XXX组件的功能、时序和接口。 >
+<This section defines the function, sequence and interface of the XXX Component. >
 
-| 类别 | 目标 / 假设 / 风险 | 如何验证 | 回退方式 |
-| --- | --- | --- | --- |
-| 性能 / 安全 / 兼容 / 可维护性 / 交付风险 | <具体内容> | <验证手段> | <不达标时怎么退> |
+##### 5.3.4.1.1 描述/Description
 
-## 5 模块契约（分层组件定义）
+<本节详细定义了组件XXX的功能。>
+<This section defines the function of Component XXX in detail. ></this>
 
-> 每个模块一节，模块名与「4.3.2 模块清单」一致；按层分节，层内按模块。
-> 覆盖范围是公开契约：对外接口、事件、对外数据结构、资源与约束。
-> 每个模块对应一份详细设计 `03-design-<模块>.md`；私有数据、内部函数、算法写在对应文件里，不在这里重复。
-> 跨模块接口全景见 4.3.3，本节只写每个模块自己的接口细节；同一细节只写一处。
-> 公开接口写函数名；4.3.3 的组件间接口用同一函数名标识，两边直接对上。
+##### 5.3.4.1.2 时序/Sequence
 
-### 5.1 应用层
+<本节将通过绘制顺序图来描述外部组件和组件XX之间的交互过程。>
+<This section will describe the interaction process between the external Component and Component XX by drawing a sequence diagram.></this>
 
-#### <模块 A>
+E.g.,
 
-**层**：应用层
+##### 5.3.4.1.3 接口定义/Interface Definition
 
-**覆盖 REQ**：REQ-<产品>-<域>-001、REQ-<产品>-<域>-002
+<本节需要详细描述组件XX的所有外部接口。>
+< This section needs to describe all external interfaces of Component XX in detail.>
 
-**公开接口**
+E.g.,
 
-| 函数名 | 功能 | 输入 | 输出 / 返回 | 错误 | 调用上下文 | 约束 |
-| --- | --- | --- | --- | --- | --- | --- |
-| <函数名> | <一句话功能> | <参数与类型> | <返回值与类型> | <错误编号 含义——处置> | <同步 / 异步 / 事件> | <格式 / 大小 / 频率 / 时序> |
+### 5.3.5 中间层组件定义/Middle Layer Component Definition
 
-**事件与回调**
+<本节主要介绍中间层组件的定义。>
+<This chapter mainly describes the Middle Layer Component definition.></this>
 
-- 事件 / 回调名：<何时触发、谁消费、负载是什么、同步还是异步>；没有写「无」。
+#### 5.3.5.1 组件XXX定义/Component xxx Definition
 
-**对外数据**
+**覆盖需求**：SSR002
 
-| 字段 | 类型 | 取值域 / 约束 | 说明 |
-| --- | --- | --- | --- |
-| <字段> | <类型> | <范围 / 枚举 / 可空> | <含义> |
+<本节定义了XXX组件的功能、时序和接口。 >
+<This section defines the function, sequence and interface of the XXX Component. >
 
-**资源与约束**
+##### 5.3.5.1.1 描述/Description
 
-- <线程 / 并发 / 内存 / 时限 / 兼容性 / 安全约束>；没有写「无」。
+<本节详细定义了组件XXX的功能。>
+<This section defines the function of Component XXX in detail. ></this>
 
-### 5.2 中间层
+##### 5.3.5.1.2 时序/Sequence
 
-#### <模块 B>
+<本节将通过绘制顺序图来描述外部组件和组件XXX之间的交互过程。
+<This section will describe the interaction process between the external Component and Component XXX by drawing a sequence diagram.></this>.
 
-**层**：中间层
+##### 5.3.5.1.3 接口定义/Interface Definition
 
-**覆盖 REQ**：REQ-<产品>-<域>-001
+<本节需要详细描述组件XX的所有外部接口。>
+<This section needs to describe all external interfaces of Component XX in detail. ></this>
 
-**公开接口**
+### 5.3.6 驱动层组件定义/Driver Layer Component Definition
 
-| 函数名 | 功能 | 输入 | 输出 / 返回 | 错误 | 调用上下文 | 约束 |
-| --- | --- | --- | --- | --- | --- | --- |
-| <函数名> | <一句话功能> | <参数与类型> | <返回值与类型> | <错误编号 含义——处置> | <同步 / 异步 / 事件> | <格式 / 大小 / 频率 / 时序> |
+<本节定义了XXX组件的功能、时序和接口。 >
+<This section defines the function, sequence and interface of the XXX Component. >
 
-**事件与回调**：无。
+#### 5.3.6.1 组件XXX定义/Component XXX Definition
 
-**对外数据**
+**覆盖需求**：SSR001
 
-| 字段 | 类型 | 取值域 / 约束 | 说明 |
-| --- | --- | --- | --- |
-| <字段> | <类型> | <范围 / 枚举 / 可空> | <含义> |
+<本节定义了XXX组件的功能、顺序和接口。>
+< This section defines the function, sequence and interface of the XXX Component.>.
 
-**资源与约束**：无。
+##### 5.3.6.1.1 描述/Description
 
-### 5.3 驱动层
+<本节详细定义了组件XXX的功能。>
+<This section defines the function of Component XXX in detail. ></this>
 
-无。
+##### 5.3.6.1.2 时序/Sequence
 
-> 不分层的项目只写 5.1「应用层」，5.2、5.3 写「无」；模块名必须与 4.3.2 模块清单一致。
+<本节将通过绘制顺序图来描述外部组件和组件XXX之间的交互过程。>
+<This section will describe the interaction process between the external Component and Component XXX by drawing a sequence diagram.></this>
 
-## 6 生产、运行、维护与报废要求（如适用）
+##### 5.3.6.1.3 接口定义/Interface Definition
 
-> 仅当项目对生产、运行、维护或报废有约束时填写；没有写「不适用」。
+<本节需要详细描述组件XXX的所有外部接口>。
+<This section needs to describe all external interfaces of Component XXX in detail></this>
 
-| 阶段 | 要求 | 验证 |
-| --- | --- | --- |
-| 生产 / 运行 / 维护 / 报废 | <要求> | <验证方式> |
+## 5.4 动态行为/Dynamic behavior
 
-## 7 追溯分析
+<本章主要介绍软件的动态行为。软件的动态行为是指软件元素在特定情况下相互作用的过程。常见的动态行为包括：启动、关闭和工作状态。>
+<This chapter mainly describes the dynamic behavior of software. The dynamic behavior of software refers to the process that software elements act on each other in a specific scenario. Common dynamic behaviors include: start up, shutdown and work state.>
 
-> 本节是正式追溯记录；模块契约的「覆盖 REQ」是索引。若两处结论冲突，以本节为准，并回头修契约。
+> 一张整体时序图，覆盖整个产品：开机 → 休眠 → 工作状态 → 关机。
+> 图下面按阶段逐个解释：怎么进入、期间做什么、外部看到什么、怎么退出或迁移。
+> 每个参与者一个小节，顺序与图一致；小节标题和表里的状态名都用图中的参与者名。
+> 工作状态可能不止一个，按产品实际情况列。
+> **整体时序图（sequenceDiagram）**
 
-### 7.1 软件需求 → 架构元素
+```mermaid
+sequenceDiagram
+    participant A as 开机
+    participant B as 休眠
+    participant C as 工作状态1
+    participant D as 工作状态2
+    participant E as 关机
 
-| 软件需求 | 模块 / 接口 | 覆盖说明 |
-| --- | --- | --- |
-| REQ-<产品>-<域>-001 | <模块 A / 函数名> | <如何覆盖> |
+    Note over A: 上电 / 复位
+    A->>B: 初始化完成，进入低功耗
+    B->>C: 唤醒事件
+    C->>D: 切换条件满足
+    D->>C: 切回条件满足
+    C->>B: 空闲超时
+    D->>B: 空闲超时
+    A->>E: 关机命令
+    B->>E: 关机命令
+    C->>E: 关机命令
+    D->>E: 关机命令
+```
 
-### 7.2 架构元素 → 软件需求
+#### 5.4.1 开机
 
-| 架构元素 | 软件需求 | 说明 |
-| --- | --- | --- |
-| <模块 A> | REQ-<产品>-<域>-001 | <该元素支撑的需求> |
+> 上电自检、加载配置、初始化各模块；失败走复位。
 
-## 8 交接给详细设计
+| 状态 | 进入条件    | 期间动作                     | 外部可见       | 退出 / 迁移                      |
+| ---- | ----------- | ---------------------------- | -------------- | -------------------------------- |
+| 开机 | 上电 / 复位 | 自检、加载配置、初始化各模块 | <灯 / 屏 / 无> | 初始化完成 → 休眠；失败 → 复位 |
 
-> 人确认后写。只写判断，不复述正文；详细设计师读这一节就能开工。
+#### 5.4.2 休眠
 
-- 模块边界：<每个模块负责什么、不负责什么>
-- 公开契约：<详细设计师不能改的接口 / 数据 / 约束>
-- 详细设计拆分：<按模块清单逐份交接；文件名 `03-design-<模块>.md`，一个模块一份>
-- 未决项：<还需要谁拍板、是否阻塞>
-- 需要详细设计判断的取舍：<架构给方向、函数级取舍留给 03 的点>
+> 初始化完成后进入低功耗，等唤醒事件或关机命令。
+
+| 状态 | 进入条件   | 期间动作             | 外部可见      | 退出 / 迁移                             |
+| ---- | ---------- | -------------------- | ------------- | --------------------------------------- |
+| 休眠 | 初始化完成 | 低功耗等待，外设关闭 | <灯灭 / 屏灭> | 唤醒事件 → 工作状态1；关机命令 → 关机 |
+
+#### 5.4.3 工作状态1
+
+> 怎么进入、期间做什么、外部看到什么、怎么退出。
+
+| 状态      | 进入条件          | 期间动作 | 外部可见   | 退出 / 迁移 |
+| --------- | ----------------- | -------- | ---------- | ----------- |
+| 工作状态1 | <唤醒 / 进入条件> | <做什么> | <看到什么> | <迁移到哪>  |
+
+#### 5.4.4 工作状态2
+
+> 同上；没有第二个工作状态就删掉这一节，同时删掉图里的参与者。
+
+| 状态      | 进入条件   | 期间动作 | 外部可见   | 退出 / 迁移 |
+| --------- | ---------- | -------- | ---------- | ----------- |
+| 工作状态2 | <切换条件> | <做什么> | <看到什么> | <迁移到哪>  |
+
+#### 5.4.5 关机
+
+> 正常关机与异常关机分开写；保存什么、关什么写具体。
+
+| 状态 | 进入条件                     | 期间动作                         | 外部可见    | 退出 / 迁移    |
+| ---- | ---------------------------- | -------------------------------- | ----------- | -------------- |
+| 关机 | 关机命令 / 掉电检测 / 看门狗 | <落盘、关闭外设；异常时紧急保存> | <提示 / 无> | → 断电 / 复位 |
+
+<This section describes the work state.></this>
+
+## 5.5 资源消耗目标/Resource consumption Objectives
+
+<本章用于定义每个组件的资源消耗。包括存储介质，如ROM、RAM、外部/内部EEPROM、Flash等。>
+<This chapter is used to define resource consumption of each component. Including storage media such as ROM,RAM, external/internal EEPROM, flash ,etc.>
+
+### 5.5.1 闪存地址分配/Flash Address Assignment
+
+<本节介绍闪存的分配。>
+<This section describes the allocation of flash. ></this>
+
+| No. | 名称 Name | 起始地址 Starting Address | 容量 Capacity | 描述 Description |
+| --- | --------- | ------------------------- | ------------- | ---------------- |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+
+### 5.5.2 RAM地址分配/RAM Address Assignment
+
+<本节描述了RAM的分配。>
+<This section describes the allocation of RAM. ></this>
+
+| No. | 名称 Name | 起始地址 Starting Address | 容量 Capacity | 描述 Description |
+| --- | --------- | ------------------------- | ------------- | ---------------- |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+
+### 5.5.3 ROM地址分配/ROM Address Assignment
+
+<本节描述了ROM的分配。>
+< This section describes the allocation of ROM.>
+
+| No. | 名称 Name | 起始地址 Starting Address | 容量 Capacity | 描述 Description |
+| --- | --------- | ------------------------- | ------------- | ---------------- |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+
+### 5.5.4 EEPROM地址分配/EEPROM Address Assignment
+
+<本节描述了EEPROM的分配。>
+<This section describes the allocation of EEPROM.></this>
+
+| No. | 名称 Name | 起始地址 Starting Address | 容量 Capacity | 描述 Description |
+| --- | --------- | ------------------------- | ------------- | ---------------- |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+|     |           |                           |               |                  |
+
+### 5.5.5 时间限制设计
+
+| xxx时间限制  | xxx时间限制 |
+| ------------ | ----------- |
+| 时间限制描述 |             |
+| 性能估算     |             |
+| 设计描述     |             |
+| 备注         |             |
+
+### 5.5.6 性能/Performance
+
+<此部分用于定义每个组件的 CPU负载。>
+<This section is used to define CPU load of each component. ></this>
+
+| No. | 名称 Name | CPU负载 CPU load |
+| --- | --------- | ---------------- |
+|     |           |                  |
+|     |           |                  |
+|     |           |                  |
+
+## 5.6 软件调度机制/Software Scheduling Mechanism
+
+<本章用于描述考虑任务优先级、中断信号和调度机制的软件调度机制。>
+<This chapter is used to describe software scheduling mechanism considering task priority, interrupt signal and schedule mechanism.>
+
+### 5.6.1 任务/Task
+
+| No. | 名称 Name | 类别 Type | 任务 Task | 周期 Cycle period | 偏移量 Offset | 触发事件 Trigger Event |
+| --- | --------- | --------- | --------- | ----------------- | ------------- | ---------------------- |
+|     |           |           |           |                   |               |                        |
+|     |           |           |           |                   |               |                        |
+|     |           |           |           |                   |               |                        |
+
+### 5.6.2 中断/Interrupt
+
+| No. | 中断名称 Interrupt Name | 中断类别 Interrupt Category | 嵌套 Nesting | 资源编号 Source Number | 优先级 Priority | 特殊功能名称 Special Function Name |
+| --- | ----------------------- | --------------------------- | ------------ | ---------------------- | --------------- | ---------------------------------- |
+|     |                         |                             |              |                        |                 |                                    |
+|     |                         |                             |              |                        |                 |                                    |
+|     |                         |                             |              |                        |                 |                                    |
+
+### 5.6.3 调度机制/Scheduler mechanism
+
+<本节用于描述任务和中断的软件调度机制。>
+<This section is used to describe software scheduling mechanism for tasks and interrupts.></this>
+
+## 5.7 异常清单
+
+| No. | 异常代码 | 异常名称 | 关联的组件 | 描述 | 措施 |
+| --- | -------- | -------- | ---------- | ---- | ---- |
+|     |          |          |            |      |      |
+|     |          |          |            |      |      |
+
+## 5.8 假设和约束
+
+描述软件架构设计的假设和约束条件。
+
+例如:硬件限制:FlashROM:512KB, RAM:32K，数据Flash:32K
+
+# 6 生产、运行、服务和报废要求（仅ASIL要求）
+
+## 6.1 对生产的要求
+
+## 6.2 对安装、调试和维护的要求
+
+# 7 追溯分析
+
+| 软件需求 | 软件需求 | 软件架构 |      |
+| -------- | -------- | -------- | ---- |
+| ID       | ASIL     | 组件ID   | ASIL |
+|          |          |          |      |
+|          |          |          |      |
+
+| 软件需求 | 软件需求 | 软件架构                                   | 软件架构                                   | 软件架构 |
+| -------- | -------- | ------------------------------------------ | ------------------------------------------ | -------- |
+| ID       | ASIL     | NO.                                        | NO.                                        | ASIL     |
+|          |          | 5.2 外部接口/External Interface            | 5.2 外部接口/External Interface            |          |
+|          |          | 5.3.1 数据定义                             | 5.3.1 数据定义                             |          |
+|          |          | 5.3.2组件间的接口设计                      | 接口ID1                                    |          |
+|          |          | 5.3.2组件间的接口设计                      | 接口ID2                                    |          |
+|          |          | 5.3.2组件间的接口设计                      | 接口ID3                                    |          |
+|          |          | 5.3.2组件间的接口设计                      | ..........                                 |          |
+|          |          | 5.3.3 组件间的依赖关系                     | 5.3.3 组件间的依赖关系                     |          |
+|          |          | 5.3.4.1.2时序                              | 5.3.4.1.2时序                              |          |
+|          |          | 5.3.4.2.2 时序                             | 5.3.4.2.2 时序                             |          |
+|          |          | 5.3.4.3.2 时序                             | 5.3.4.3.2 时序                             |          |
+|          |          | .........                                  | .........                                  |          |
+|          |          | 5.4.1 开机                                 | 5.4.1 开机                                 |          |
+|          |          | 5.4.5 关机                                 | 5.4.5 关机                                 |          |
+|          |          | 5.4.3 工作状态1                             | 5.4.3 工作状态1                             |          |
+|          |          | 5.5.1 闪存地址分配                         | 5.5.1 闪存地址分配                         |          |
+|          |          | 5.5.2 RAM地址分配                          | 5.5.2 RAM地址分配                          |          |
+|          |          | 5.5.3 ROM地址分配                          | 5.5.3 ROM地址分配                          |          |
+|          |          | 5.5.4 EEPROM地址分配                       | 5.5.4 EEPROM地址分配                       |          |
+|          |          | 5.5.5 时间限制设计                         | 5.5.5 时间限制设计                         |          |
+|          |          | 5.5.6 性能/Performance                     | 5.5.6 性能/Performance                     |          |
+|          |          | 5.6 软件调度机制                           | 5.6 软件调度机制                           |          |
+|          |          | 5.6.1 任务/Task                            | 5.6.1 任务/Task                            |          |
+|          |          | 5.6.2 中断/Interrupt                       | 5.6.2 中断/Interrupt                       |          |
+|          |          | 5.6.3 调度机制/Scheduler mechanism         | 5.6.3 调度机制/Scheduler mechanism         |          |
+|          |          | 5.7 异常清单                               | 5.7 异常清单                               |          |
+|          |          | 6 生产、运行、服务和报废要求（仅ASIL要求） | 6 生产、运行、服务和报废要求（仅ASIL要求） |          |
+|          |          | 6.1 对生产的要求                           | 6.1 对生产的要求                           |          |
+|          |          | 6.2 对安装、调试和维护的要求               | 6.2 对安装、调试和维护的要求               |          |
+|          |          |                                            |                                            |          |
+
+# 8 附录/APPENDIXES
+
+编译参数/应用参数描述如下：
+
+Compile parameters/ Application parameters are described as below:

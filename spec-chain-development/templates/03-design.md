@@ -1,260 +1,347 @@
-# 03-design-<模块>.md —— <模块> 软件详细设计规范
+> 角色：详细设计师 ｜ 依据：02-architecture.md ｜ 版本：v1.0 ｜ 状态：待确认
 
-> 角色：详细设计师 ｜ 依据：02-architecture.md ｜ 版本：r1 ｜ 状态：待确认
-> **一个模块一份**：文件名 `03-design-<模块>.md`，模块名与 02 模块清单一行一致。
-> 本文件只写这一个模块：把 02 的模块契约展开到可实现的程度（接口、数据结构、函数、调用关系、错误、不变量）。
-> 公开接口、模块边界已在 02 定死，这里不改；发现 02 不可实现，回交 02，不自行改契约。
+# 1 修订记录/Revision record
 
-**变更历史**
+1．	版本命名规则，vX.Y，如初版发布为v1.0
+Version naming rules, vX.Y. For example, the first version released is v1.0.
+
+2．	文档内容变更，Date应为变更日期；版本号X维持不变，Y增加1，如v1.1；
+If the content of the document has changed, Date shall be the date of the change; and the version number X shall remain unchanged and Y shall increase by 1, such as v1.1.
+
+3．	文档内容通过批准，Date为 批准日期；版本号X增加1，Y降为0，如v2.0；
+If the document update is approved, Date shall be the approval date; version number X shall be increased by 1, and Y shall be decreased to 0, e.g. v2.0.
 
 | 版本 | 状态 | 变更内容 | 变更日期 | 更改人 | 批准人 |
 | --- | --- | --- | --- | --- | --- |
 | r1 | 草稿 | 建档 | <YYYY-MM-DD> | <名字> | <名字> |
 
-## 1 简介
+# 2 简介/INTRODUCTION
 
-### 1.1 目的
+<这里简要地介绍要描述的对象，包括文件的目的、背景和文件所服务的读者。>
+<This process briefly introduces the object to be described, including the purpose of document the background and the readers served by the document.>
 
-<这份详细设计为什么存在、给谁看。>
+## 2.1 目的/Purpose
 
-### 1.2 范围
+<详细描述本文件的目的。>
+<Describe the purpose of this document in detail.>
 
-<只覆盖本模块；明确不覆盖其他模块。>
+本文档描述了软件详细设计，主要目的是为了描述：软件描述、外部接口、软件分解、动态行为、资源消耗目标。
 
-### 1.3 术语和缩略语
+This document describes the software detail design with the main purpose of describing: software description, external interfaces, software decomposition, dynamic behavior, and resource consumption goals.
 
-| 术语 / 缩略语 | 含义 |
+## 2.2 范围/Scope
+
+<详细描述本文件的范围。>
+<Detailed describe the scope of this document.>
+
+e.g.,
+
+This document only applies to software detailed design process of #Project.
+
+本文档仅适用于[项目]中的软件详细设计流程。
+
+## 2.3 术语、定义和缩略语/ Terms, definitions and Abbreviations
+
+<列出文件中出现的所有缩略语。>
+<List all abbreviations that appear in the document.>
+
+| 缩略语 Abbreviation | 解释 Explanation |
 | --- | --- |
-| <术语> | <定义> |
+| PM | Project Manager |
+|  |  |
+|  |  |
+|  |  |
+|  |  |
 
-### 1.4 参考文档
+## 2.4 参考/References
 
-| 文档 | 版本 | 说明 |
+<列出所有参考文件及其位置。>
+<List all reference documents and their locations.>
+
+| No. | 工作产品名 Work Product Name | 位置 Location |
 | --- | --- | --- |
-| 02-architecture.md | r1 | 架构与模块契约 |
-| 01-requirements.md | r1 | 软件需求 |
+| 1 | Project Plan | …\man.3 |
+| 2 | Software Detailed Design Plan | …\swe.3 |
+|  |  |  |
+|  |  |  |
+|  |  |  |
 
-## 2 资源
+# 3 资源/RESOURCE
 
-> 本模块依赖的资源与外部接口：平台 / 工具链 / 外部库 / 相关接口。
-> 人员、会议、环境不在本文档。
+## 3.1 角色/Roles
 
-| 资源 / 接口 | 版本 / 规格 | 用途 | 约束 |
-| --- | --- | --- | --- |
-| <平台 / 工具链 / 外部库> | <版本> | <用途> | <兼容 / 许可 / 调用方式> |
+<列出参与这一过程的相关角色和相关信息。>
+<List the relevant roles involved in this process and the relevant information.>
 
-## 3 沟通计划
-
-| 会议 / 评审 | 参与人 | 频率 | 输出 |
-| --- | --- | --- | --- |
-| 详细设计评审 | 详细设计师、架构师、实现者 | 每次变更 | 评审记录 / 修改项 |
-
-## 4 软件组件描述
-
-### 4.1 功能描述
-
-<本模块负责什么功能，与 02 模块清单的职责对齐；只写功能，不写实现。>
-
-### 4.2 组件交互
-
-<本模块与其他模块的交互：同步调用、事件、共享数据；与 02 的动态行为对齐。>
-
-## 5 接口
-
-> 本模块的详细设计接口：数据结构、变量、参数、外部函数定义。
-> 公开接口已在 02 定死；这里展开到数据类型与函数签名。
-> 本节列本模块对外 / 被调用的接口清单；模块内部函数与私有数据的细节在 7.2，同一细节只写一处。
-
-### 5.1 数据结构
-
-| 名称 | 类型 | 字段 | 说明 |
-| --- | --- | --- | --- |
-| <结构名> | 结构体 / 类 / 表 | <字段列表> | <用途> |
-
-### 5.2 变量
-
-| 变量名 | 类型 | 作用域 | 初值 | 说明 |
+| 角色 Role | 姓名 Name | 联系电话 Contact Number | 电子邮件 Email | 备注 Remark |
 | --- | --- | --- | --- | --- |
-| <变量名> | <类型> | 全局 / 模块内 / 函数内 | <初值> | <用途与约束> |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
+|  |  |  |  |  |
 
-### 5.3 参数
+## 3.2 相关接口/Relevant Interfaces
 
-| 参数名 | 描述 | 数据类型 | 值 | 单位 | 转化 / 约束 |
+参见“软件资源管理表”中SWE.3章节内容
+
+# 4 沟通计划/COMMUNICATION PLAN
+
+参见“软件沟通管理计划”中SWE.2章节内容
+
+# 5 软件组件描述/SOFTWARE COMPONENT DESCRIPTION
+
+<组件的详细描述，包括组件的功能、目标的实现、在软件中的作用和其他信息>。
+
+<Detailed description of the component, including the function of the component, the realization of the goal, the role in the software and other information.>
+
+<此章节内容为继承Swe.2架构设计的内容。>
+
+<This chapter inherits the content of SWE.2 architecture design.>
+
+## 5.1 功能描述/ Function Description
+
+<组件的详细描述，包括组件的功能、目标的实现、在软件中的作用和其他信息>。
+<Detailed description of the component, including the function, the realization of the goal, the role in the software and other information.>
+
+## 5.2 组件交互/Component Interaction
+
+<本章用于描述待开发软件组件与其他组件的关系（直接交互）。>
+
+< This chapter is used to describe the relationship (direct interaction) of the software component to be developed with other components. >
+
+<组件交互图>
+
+# 6 接口/Interface
+
+<本章描述组件间接口，以及所有单元之间的接口。>
+< This chapter describes the interfaces between components, as well as the interfaces between all units. >
+
+## 6.1 数据结构/Data Structure
+
+<本章介绍了数据结构的设计，包括枚举、结构和其他自定义数据类型。>
+<This chapter describes the design of data structures, including enumerations, structures, and other custom data types.>
+
+### 6.1.1 数据结构A/Data Structure A
+
+<下面详细介绍数据结构A的设计。>
+<The design of data structure A is described in detail below.>
+
+| 定义 Define |  |
+| --- | --- |
+| 解释 Explanation |  |
+
+## 6.2 变量/Variable
+
+<本章描述全局变量。 请注意，如果全局变量是自定义类型，则必须在数据结构一章中描述该类型。>
+<This chapter describes global variable. Note that if a global variable is of a custom type, that type must be described in the chapter Data Structure.>
+
+### 6.2.1 变量A/Variable A
+
+<下面详细介绍变量A的设计。>
+<The design of variable A is described in detail below.>
+
+| 描述 Description |  |
+| --- | --- |
+| 方向 Direction |  |
+| 数据类型 Data Type |  |
+| 范围 Range |  |
+| 默认值 Default Value |  |
+
+## 6.3 参数/ Parameter
+
+<本章介绍所有重要参数。>
+<This chapter describes all important parameters.>
+
+| 参数名 Param Name | 描述 Description | 数据类型 Data Type | 值 Value | 单位 Unit | 转化 Conversion |
 | --- | --- | --- | --- | --- | --- |
-| <参数名> | <含义> | <类型> | <默认 / 范围> | <单位 / 无> | <校验 / 换算> |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
 
-### 5.4 外部函数定义
+## 6.4 外部函数定义/External Function Definition
 
-> 外部库 / SDK 提供的函数原型；外部系统只走协议 / 消息，不列函数。
-> 提供方写库名或系统名；没有外部函数写「无」。
+### 6.4.1 函数A/Function A
 
-| 函数编号 | 函数名 | 原型 | 提供方 | 输入 | 输出 / 返回 | 错误 | 说明 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F-EXT-001 | <函数名> | <签名> | <库 / SDK> | <参数与类型> | <返回值与类型> | <错误 / 无> | <用途> |
+<描述外部函数设计。>
+<The design of the external function is described.>
 
-## 6 软件组件设计
+| 原型 Prototype |  |
+| --- | --- |
+| 描述 Description |  |
+| 参数 Parameter |  |
+| 返回值 Return Value |  |
 
-### 6.1 组件分解
+# 7 软件组件设计/SOFTWARE COMPONENT DESIGN
 
-> 把本模块分解到软件单元（文件 / 类）；每个单元包含一个或多个函数。
-> 8.2 的软件单元与这里一一对应。
+## 7.1 组件分解/Component Decomposition
 
-| 软件单元 | 文件 / 类 | 职责 |
-| --- | --- | --- |
-| <单元 A> | <文件 / 类> | <职责> |
+<本章用于描述软件组件的分解结构。它可以包括：单元的结构部署和单元之间的关系。>
 
-### 6.2 静态特性
+<This chapter is used to describe the decomposition structure of software component. It could include the unit structure deployment and relationship between software units. >
 
-#### 6.2.1 框架图
+## 7.2 静态特性/Static Aspects
 
-> 本模块内软件单元的静态结构：谁包含谁、谁引用谁。按项目习惯用 Mermaid、PlantUML 或文本图。
+### 7.2.1 框架图/Block Diagram
 
-<图或文字说明；没有就写「无」。>
+<本章介绍每个子组件的静态交互。> 
+<This chapter explains the static interaction of each subcomponent. >
 
-#### 6.2.2 函数列表
+下图示例仅供参考。
+The following figure shows an example for reference only.
 
-> 本节是概览索引；每个函数的输入、输出、错误、约束等详情在 7.2。
+### 7.2.2 函数列表
 
-| 序号 | 函数名 | 描述 | 所属单元 | 调用单元 |
-| --- | --- | --- | --- | --- |
-| 1 | <函数名> | <功能> | <单元 A> | <单元 B / 无> |
+| 序号 | 函数名 | 描述 | 定义组件 | 调用组件 | 调用组件 | 调用组件 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 序号 | 函数名 | 描述 | 定义组件 | 组件1 | 组件2 | …… |
+|  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |
+|  |  |  |  |  |  |  |
 
-#### 6.2.3 函数关系
+### 7.2.3 函数关系
 
-> 函数之间的调用关系（调用树 / 调用图）；没有跨函数调用写「无」。
+通过函数的调用树来表示函数关系。例如:
 
-<调用树或调用图；例如：>
-
-- <函数 A>
-  - <函数 B>
-  - <函数 C>
-
-#### 6.2.4 源代码文件清单
+### 7.2.4 源代码文件清单
 
 | 文件名称 | 描述 | 相对路径 |
 | --- | --- | --- |
-| <文件名> | <职责> | <相对路径> |
+| 文件名称 | 描述 | 相对路径 |
+|  |  |  |
+|  |  |  |
+|  |  |  |
 
-### 6.3 动态特性
+## 7.3 动态特性/Dynamic Aspects
 
-> 任务、中断、定时器、事件、调度方式、时序 / 活动 / 状态 / 数据流；没有写「无」。
-> 按项目复杂度选择小节，不要求全填。
+<本章定义详细设计中与软件架构相关的动态方面，包括相关软件单元之间的交互，以实现组件的动态行为。。下图仅作为参考示例。>
+<This chapter explains the dynamic aspects of the detailed design with respect to the software architecture, including the interactions between relevant software units to fulfill the component’s dynamic behavior. The following figure shows an example for reference only.>
 
-#### 6.3.1 任务与中断
+### 7.3.1 任务
 
-| 类型 | 名称 | 优先级 | 触发 / 周期 | 说明 |
-| --- | --- | --- | --- | --- |
-| 任务 / 中断 | <名称> | <优先级> | <触发条件 / 周期> | <职责与约束> |
-
-#### 6.3.2 定时器与事件
-
-| 类型 | 名称 | 周期 / 触发 | 处理 | 约束 |
-| --- | --- | --- | --- | --- |
-| 定时器 / 事件 | <名称> | <周期 / 事件> | <做什么> | <时序 / 并发> |
-
-#### 6.3.3 调度方式
-
-<抢占 / 协作 / 事件驱动 / 轮询；没有写「无」。>
-
-#### 6.3.4 时序图 / 活动图 / 状态图 / 数据流图
-
-> 按需选择，用 Mermaid、PlantUML 或文字；没有写「无」。
-
-<图或文字说明。>
-
-## 7 软件单元设计
-
-### 7.1 代码生成配置
-
-> 代码生成器 / 框架的配置项：目标语言、命名规则、错误码风格、日志、编译开关；不用代码生成写「不适用」。
-
-| 配置项 | 值 | 说明 |
-| --- | --- | --- |
-| <配置项> | <值> | <作用> |
-
-### 7.2 软件单元
-
-> **8.2 是软件单元，不是模块**：一个模块通常含 1–N 个软件单元，按需复制 `#### 8.2.x`。
-> 单元名与 6.1 的分解一致；7.2 是函数详情，6.2.2 只是概览索引。
-> 只写实现需要的判断：算法步骤、状态迁移、错误分支、不变量；不写代码。
-
-#### 7.2.1 <软件单元 A>
-
-**单元说明**：<职责、输入输出、依赖；与 6.1 一致。>
-
-**函数设计**
-
-| 函数编号 | 函数名 | 所在文件 | 功能 | 输入 | 输出 / 返回 | 错误 / 副作用 | 约束 |
-| --- | --- | --- | --- | --- | --- | --- | --- |
-| F-001 | <函数名> | <相对路径 / 文件> | <一句话功能> | <参数与类型> | <返回值与类型> | <错误 / 写文件 / 改状态> | <线程 / 复杂度 / 时限> |
-
-**参数**
-
-| 参数 | 描述 | 类型 | 值 | 单位 | 约束 |
+| 优先级 | 名称 | 类型Type | 堆栈大小 | 描述 | 备注 |
 | --- | --- | --- | --- | --- | --- |
-| <参数名> | <含义> | <类型> | <默认 / 范围> | <单位 / 无> | <校验 / 来源> |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
+|  |  |  |  |  |  |
 
-没有参数写「无」。
+### 7.3.2 中断
 
-**私有数据**
+### 7.3.3 定时器
 
-| 字段 | 类型 | 取值域 / 约束 | 说明 |
-| --- | --- | --- | --- |
-| <字段> | <类型> | <范围 / 枚举 / 可空> | <含义> |
+### 7.3.4 事件
 
-没有私有数据写「无」。
+### 7.3.5 调度
 
-**状态与流程**
+### 7.3.6 时序图/Sequence Diagram
 
-> 状态属于实体，不属于变量。写状态集合、迁移事件、迁移动作；没有状态机写「无」。
+<下图仅供参考。 通过时序图显示组件内的关键时序过程。>
+<The following figure is for reference only. Show the key timing process within the component through timing diagram.>
 
-| 实体 | 状态 | 事件 | 下一状态 | 动作 |
-| --- | --- | --- | --- | --- |
-| <实体> | <当前状态> | <触发事件> | <目标状态> | <做什么> |
-
-**动态特性**
-
-> 任务、中断、定时器、事件、调度方式；没有写「无」。
-
-| 类型 | 名称 | 优先级 | 触发 / 周期 | 说明 |
-| --- | --- | --- | --- | --- |
-| 任务 / 中断 / 定时器 / 事件 | <名称> | <优先级> | <触发条件 / 周期> | <职责与约束> |
-
-**错误处理**
-
-| 错误编号 | 触发条件 | 处理 | 对外表现 |
-| --- | --- | --- | --- |
-| <错误编号> | <条件> | <重试 / 降级 / 上报 / 退出> | <返回码 / 日志 / 用户可见> |
-
-**不变量与约束**
-
-- <始终成立的条件：数据结构约束、顺序约束、线程约束>；没有写「无」。
-
-## 8 可追溯性
-
-**架构 → 详设**
-
-| 架构接口 / 函数 | 详设单元 / 函数 |
+| 时序图ID |  |
 | --- | --- |
-| <本模块公开接口 / 函数名> | <单元 / 函数> |
+| 软件组件 |  |
+| 时序图描述 |  |
+| 时序图 | 时序图 |
 
-**需求 → 详设**
+### 7.3.7 活动图/Activity Diagram
 
-| 软件需求 | 详设单元 / 函数 | 说明 |
-| --- | --- | --- |
-| REQ-<产品>-<域>-001 | <函数 / 单元> | <如何兑现> |
+<下图仅供参考。 通过活动图显示组件中的关键活动过程。>
+<The following figure is for reference only. Show the key activity process in the component through the activity diagram.>
 
-## 9 附录
+| 活动图ID |  |
+| --- | --- |
+| 软件组件 |  |
+| 活动图描述 |  |
+| 活动图 | 活动图 |
 
-**数据质量**
+### 7.3.8 状态图
 
-| 数据 | 质量要求 | 校验 / 保障 | 失败处理 |
+| 状态图ID |  |
+| --- | --- |
+| 软件组件 |  |
+| 状态图描述 |  |
+| 状态图 | 状态图 |
+
+### 7.3.9 数据流图
+
+| 数据流图ID |  |
+| --- | --- |
+| 软件组件 |  |
+| 数据流图描述 |  |
+| 数据流图 | 数据流图 |
+
+# 8 软件单元设计/SOFTWARE UNIT DESIGN
+
+## 8.1 代码生成配置/Configuration for Code Generation
+
+<本章介绍MATLAB自动生成代码的相关配置。> This chapter describes the configuration of MATLAB automatic code generation
+<也可以独立的一个文档。但是也需要在SUP.8中进行配置管理。> It can also be a separate document. However, configuration management is also required in SUP.8
+
+## 8.2 软件单元A/Software Unit A
+
+### 8.2.1 说明/Description
+
+<本章详细介绍各个子组件的设计，包括功能实现等信息。>
+<This chapter describes the design of each sub-component in detail, including the realization of functions and other information.>
+
+### 8.2.2 函数设计/Function Design
+
+#### 8.2.2.1 函数A/Function A
+
+| 函数ID |  |  |  |  |
+| --- | --- | --- | --- | --- |
+| 函数名 |  |  |  |  |
+| 函数描述 |  |  |  |  |
+| 输入/输出 | I/O | 参数 | 类型 | 描述 |
+| 参数 |  |  |  |  |
+| 返回值 |  |  |  |  |
+| 全局变量 |  |  |  |  |
+| 静态变量 |  |  |  |  |
+| 程 序 流 程 图 |  |  |  |  |
+
+# 9 可追溯性
+
+| 软件架构 | 软件架构 | 软件架构 | 软件详设 | 软件详设 |
+| --- | --- | --- | --- | --- |
+| ID | ID | ASIL | ID | ASIL |
+| 5.2 外部接口/External Interface | 5.2 外部接口/External Interface |  |  |  |
+| 5.3.1 数据定义 | 5.3.1 数据定义 |  |  |  |
+| 5.3.2组件间的接口设计 | 接口ID1 |  |  |  |
+| 5.3.2组件间的接口设计 | 接口ID2 |  |  |  |
+| 5.3.2组件间的接口设计 | 接口ID3 |  |  |  |
+| 5.3.2组件间的接口设计 | .......... |  |  |  |
+| 5.3.3 组件间的依赖关系 | 5.3.3 组件间的依赖关系 |  |  |  |
+| 5.3.4.1.2时序 | 5.3.4.1.2时序 |  |  |  |
+| 5.3.4.2.2 时序 | 5.3.4.2.2 时序 |  |  |  |
+| 5.3.4.3.2 时序 | 5.3.4.3.2 时序 |  |  |  |
+| ......... | ......... |  |  |  |
+| 5.4.1 开机 | 5.4.1 开机 |  |  |  |
+| 5.4.5 关机 | 5.4.5 关机 |  |  |  |
+| 5.4.3 工作状态1 | 5.4.3 工作状态1 |  |  |  |
+| 5.5.1 闪存地址分配 | 5.5.1 闪存地址分配 |  |  |  |
+| 5.5.2 RAM地址分配 | 5.5.2 RAM地址分配 |  |  |  |
+| 5.5.3 ROM地址分配 | 5.5.3 ROM地址分配 |  |  |  |
+| 5.5.4 EEPROM地址分配 | 5.5.4 EEPROM地址分配 |  |  |  |
+| 5.5.5 时间限制设计 | 5.5.5 时间限制设计 |  |  |  |
+| 5.5.6 性能/Performance | 5.5.6 性能/Performance |  |  |  |
+| 5.6 软件调度机制 | 5.6 软件调度机制 |  |  |  |
+| 5.6.1 任务/Task | 5.6.1 任务/Task |  |  |  |
+| 5.6.2 中断/Interrupt | 5.6.2 中断/Interrupt |  |  |  |
+| 5.6.3 调度机制/Scheduler mechanism | 5.6.3 调度机制/Scheduler mechanism |  |  |  |
+| 5.7 异常清单 | 5.7 异常清单 |  |  |  |
+| 6 生产、运行、服务和报废要求（仅ASIL要求） | 6 生产、运行、服务和报废要求（仅ASIL要求） |  |  |  |
+| 6.1 对生产的要求 | 6.1 对生产的要求 |  |  |  |
+| 6.2 对安装、调试和维护的要求 | 6.2 对安装、调试和维护的要求 |  |  |  |
+
+| 软件需求 | 软件需求 | 软件详设 | 软件详设 |
 | --- | --- | --- | --- |
-| <数据> | <完整性 / 一致性 / 持久化 / 可恢复> | <校验方式 / 事务 / 备份> | <拒绝写入 / 回滚 / 上报> |
+| ID | ASIL | ID | ASIL |
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
+|  |  |  |  |
 
-**交接给实现**
-
-- 实现顺序：<先做哪个单元 / 哪个函数，为什么>
-- 必须遵守的约束：<02 公开契约、03 不变量、错误码>
-- 未决项：<还需要谁拍板、是否阻塞>
-- 风险：<实现时最容易出错的点>
+# 10 附录/APPENDIXES
