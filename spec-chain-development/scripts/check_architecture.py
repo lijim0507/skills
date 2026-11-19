@@ -3,7 +3,7 @@
 """架构检查（02-architecture.md，SWE.2 结构）。
 
 只查机械事实：章节是否齐全、5.3 组件定义、组件名唯一、每个组件的「覆盖需求」、
-动态行为阶段、追溯分析覆盖、文档头与章节顺序。
+动态行为整体时序图与阶段解释、追溯分析覆盖、文档头与章节顺序。
 组件粒度好不好、分层是否合理由人确认前判断。
 
 用法: python check_architecture.py <项目>/SDD
@@ -19,7 +19,6 @@ SSR_ID = r'SSR\d{3,}'
 REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
 ANY_ID = re.compile(r'\b(' + SSR_ID + r'|' + REQ_ID + r')\b')
 
-STAGES = ('开机', '休眠', '工作状态1', '工作状态2', '关机')
 LAYERS = ('5.3.4', '5.3.5', '5.3.6')
 
 
@@ -219,13 +218,30 @@ def main():
 
     dyn = find_section(heads, '动态行为')
     if dyn is not None:
-        if '```mermaid' not in raw:
-            warns.append('「5.4 动态行为」建议用 mermaid 画时序图（```mermaid 代码块）')
+        lines = raw.splitlines()
+        start = dyn['line'] - 1
+        end = len(lines)
+        for h in heads:
+            if h['line'] > dyn['line'] and h['level'] <= dyn['level']:
+                end = h['line'] - 1
+                break
+        mermaid_count = sum(1 for ln in lines[start:end]
+                            if ln.strip().startswith('```mermaid'))
+        if mermaid_count == 0:
+            warns.append('「5.4 动态行为」建议用一张整体 mermaid 时序图（```mermaid 代码块）')
+        elif mermaid_count > 1:
+            warns.append('「5.4 动态行为」应只有一张整体时序图，其余阶段用状态解释（当前 %d 张）' % mermaid_count)
         titles = subsection_titles(heads, dyn)
-        joined = '\n'.join(titles)
-        for stage in STAGES:
-            if stage not in joined:
-                warns.append('「5.4 动态行为」建议分出阶段小节：' + stage)
+        participants = [m.group(1).strip() for m in
+                        re.finditer(r'participant\s+\w+\s+as\s+(.+)',
+                                    '\n'.join(lines[start:end]))]
+        if participants:
+            sub_names = [strip_number(t) for t in titles]
+            only_diagram = [p for p in participants if p not in sub_names]
+            only_subs = [s for s in sub_names if s not in participants]
+            if only_diagram or only_subs:
+                warns.append('「5.4 动态行为」图与阶段小节不对齐：图中多出 %s；小节多出 %s'
+                             % (only_diagram or '无', only_subs or '无'))
 
     trace = find_section(heads, '追溯分析')
     if trace is not None and covered_ids:
