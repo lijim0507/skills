@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""详细设计检查（03-design-<模块>.md，SWE.3 结构，一个模块一份）。
+"""详细设计检查（03-design-<组件>.md，SWE.3 结构，一个组件一份）。
 
-只查机械事实：每个架构模块是否有对应文件、章节是否齐全、
-「8.2 软件单元」下是否有单元分组、每组有「函数设计」表（含函数编号 / 所在文件）、
-可追溯性引用 REQ、文档头与章节顺序。
+只查机械事实：每个架构组件是否有对应文件、章节是否齐全、
+「8 软件单元设计」下每个软件单元是否有「函数设计」表、可追溯性引用 SSR/REQ、
+文档头与章节顺序。
 函数是否够细、状态与流程是否完整由人确认前判断。
 
 用法: python check_design.py <项目>/SDD
@@ -17,9 +17,9 @@ import sys
 import lint_common
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
+SSR_ID = r'SSR\d{3,}'
 REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
-REQ_IN_TEXT = re.compile(r'\b(' + REQ_ID + r')\b')
-NON_UNIT = {'单元说明', '函数设计'}
+ANY_ID = re.compile(r'\b(' + SSR_ID + r'|' + REQ_ID + r')\b')
 DESIGN_GLOB = '03-design-*.md'
 DESIGN_PREFIX = '03-design-'
 DESIGN_SUFFIX = '.md'
@@ -95,6 +95,7 @@ def section_text(heads, sec):
             continue
         if h['level'] <= sec['level']:
             break
+        parts.append(h['title'])
         parts.extend(t for _, t in h['body'])
     return '\n'.join(parts)
 
@@ -141,36 +142,46 @@ def clean_cell(s):
     return s.strip().strip(chr(96)).strip('*').strip()
 
 
+def component_defs(heads):
+    """从 02 的 5.3.4/5.3.5/5.3.6 组件定义读组件名。"""
+    arch = find_section(heads, '软件架构设计')
+    if arch is None:
+        return []
+    out = []
+    for h in heads[heads.index(arch) + 1:]:
+        if h['level'] <= arch['level']:
+            break
+        m = re.match(r'^5\.3\.[456]\.\d+\s+(.+)$', h['title'].strip())
+        if not m:
+            continue
+        name = clean_cell(re.split(r'定义|/|（', m.group(1))[0])
+        name = re.sub(r'^组件', '', name).strip()
+        if name:
+            out.append(name)
+    return out
+
+
 def arch_modules(path):
-    """从 02 的模块清单读模块名。"""
     if not os.path.isfile(path):
         return []
     heads = sections(read_unfenced(path))
-    sec = find_section(heads, '模块清单')
-    if sec is None:
-        return []
-    rows = table_rows(sec['body'])
-    if not rows:
-        return []
-    idx = col_index(rows[0][1], '模块')
-    if idx is None:
-        return []
-    mods = []
-    for _, cells in rows[1:]:
-        if len(cells) <= idx:
-            continue
-        name = clean_cell(cells[idx])
-        if name and not (name.startswith('<') and name.endswith('>')):
-            mods.append(name)
-    return mods
+    return [n for n in component_defs(heads) if 'XXX' not in n and 'xxx' not in n]
 
 
 def design_files(base):
-    return sorted(glob.glob(os.path.join(base, DESIGN_GLOB)))
+    files = sorted(glob.glob(os.path.join(base, DESIGN_GLOB)))
+    if not files:
+        # 模板目录只有一份 03-design.md：把它当作空模块名来检查内容
+        plain = os.path.join(base, '03-design.md')
+        if os.path.isfile(plain):
+            files = [plain]
+    return files
 
 
 def module_from_file(path):
     name = os.path.basename(path)
+    if name == '03-design.md':
+        return ''
     if name.startswith(DESIGN_PREFIX) and name.endswith(DESIGN_SUFFIX):
         return name[len(DESIGN_PREFIX):-len(DESIGN_SUFFIX)]
     return None
@@ -181,15 +192,15 @@ def check_one(path, errors, warns):
     pairs = read_unfenced(path)
     heads = sections(pairs)
     units = 0
+    fname = os.path.basename(path)
 
     for name in ('简介', '资源', '沟通计划', '软件组件描述',
                  '接口', '软件组件设计', '软件单元设计', '可追溯性', '附录'):
         if find_section(heads, name) is None:
-            errors.append('%s 缺少必需章节：%s' % (os.path.basename(path), name))
+            errors.append('%s 缺少必需章节：%s' % (fname, name))
 
-    # 8.2 软件单元：每个单元一个 #### 分组
-    unit_sec = find_section(heads, '软件单元', '函数设计')
-    groups = {}
+    # 8 软件单元设计：8.1 代码生成配置之后的 8.x 才是软件单元
+    unit_sec = find_section(heads, '软件单元设计', '软件单元')
     if unit_sec is not None:
         start = heads.index(unit_sec)
         for h in heads[start + 1:]:
@@ -198,59 +209,55 @@ def check_one(path, errors, warns):
             if h['level'] != unit_sec['level'] + 1:
                 continue
             name = clean_cell(strip_number(h['title']))
-            if not name or norm(name) in NON_UNIT:
+            if not name or '代码生成配置' in name:
                 continue
-            if name in groups:
-                errors.append('%s 的软件单元分组重复：%s' % (os.path.basename(path), name))
-            groups[name] = h
             body = module_body(pairs, heads, h)
             text = '\n'.join(t for _, t in body)
             if '函数设计' not in text:
-                errors.append('%s 的 %s 缺少「函数设计」表' % (os.path.basename(path), name))
+                errors.append('%s 的 %s 缺少「函数设计」表' % (fname, name))
             else:
+                units += 1
                 rows = table_rows(body)
-                header = rows[0][1] if rows else None
-                if header is not None and any('函数' in c for c in header):
-                    if col_index(header, '函数', '编号') is None:
-                        warns.append('%s 的 %s 函数设计表建议加「函数编号」列'
-                                     % (os.path.basename(path), name))
-                    if col_index(header, '文件') is None:
-                        warns.append('%s 的 %s 函数设计表建议加「所在文件」列'
-                                     % (os.path.basename(path), name))
-            for key in ('参数', '私有数据', '状态与流程', '动态特性', '错误处理', '不变量与约束'):
-                if key not in text:
-                    warns.append('%s 的 %s 建议补上「%s」'
-                                 % (os.path.basename(path), name, key))
-            if not re.search(r'\|', text):
-                warns.append('%s 的 %s 没有表格（函数设计至少应是一张表）'
-                             % (os.path.basename(path), name))
+                fheader = None
+                for _, cells in rows:
+                    if any('函数' in c for c in cells):
+                        fheader = cells
+                        break
+                if fheader is not None:
+                    if (col_index(fheader, '函数', '编号') is None
+                            and col_index(fheader, '函数', 'ID') is None):
+                        warns.append('%s 的 %s 函数设计表建议加「函数编号/函数ID」列'
+                                     % (fname, name))
+                    if (col_index(fheader, '文件') is None
+                            and find_section(heads, '源代码文件清单', '文件清单') is None):
+                        warns.append('%s 的 %s 函数设计表建议加「所在文件」列，或在 7.2.4 源代码文件清单中给出'
+                                     % (fname, name))
+                for key in ('参数', '私有数据', '状态与流程', '动态特性', '错误处理', '不变量与约束'):
+                    if key not in text:
+                        warns.append('%s 的 %s 建议补上「%s」' % (fname, name, key))
 
-    units += len(groups)
-
-    # 可追溯性：需求 → 详设 表应引用 REQ
+    # 可追溯性：需求 → 详设 表应引用 SSR/REQ
     trace = find_section(heads, '可追溯性')
     if trace is not None:
         ttext = section_text(heads, trace)
-        if not REQ_IN_TEXT.findall(ttext):
-            warns.append('%s 的「可追溯性」建议列出 需求 → 详设 的映射'
-                         % os.path.basename(path))
+        if not ANY_ID.findall(ttext):
+            warns.append('%s 的「可追溯性」建议列出 需求 → 详设 的映射' % fname)
     else:
-        errors.append('%s 缺少「可追溯性」节' % os.path.basename(path))
+        errors.append('%s 缺少「可追溯性」节' % fname)
 
-    # 附录：数据质量 / 交接给实现
     appendix = find_section(heads, '附录')
     if appendix is not None:
-        atext = '\n'.join(t for _, t in appendix['body'])
+        atext = section_text(heads, appendix)
         if '数据质量' not in atext:
-            warns.append('%s 的「附录」建议含「数据质量」' % os.path.basename(path))
+            warns.append('%s 的「附录」建议含「数据质量」' % fname)
         if '交接给实现' not in atext:
-            warns.append('%s 的「附录」建议含「交接给实现」' % os.path.basename(path))
+            warns.append('%s 的「附录」建议含「交接给实现」' % fname)
 
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
-        errors.append('%s 第 %d 行：%s' % (os.path.basename(path), ln, msg))
+        errors.append('%s 第 %d 行：%s' % (fname, ln, msg))
     if not lint_common.has_role_header(raw, '详细设计师'):
-        errors.append('%s 缺少文档头：> 角色：详细设计师 ｜ 依据：…' % os.path.basename(path))
+        errors.append('%s 缺少文档头：> 角色：详细设计师 ｜ 依据：…' % fname)
     warns.extend(lint_common.heading_order_warnings(
         raw, ['简介', '资源', '沟通计划', '软件组件描述', '接口',
               '软件组件设计', '软件单元设计', '可追溯性', '附录']))
@@ -267,33 +274,37 @@ def main():
 
     files = design_files(base)
     if not files:
-        errors.append('找不到 03-design-<模块>.md（一个模块一份）')
+        errors.append('找不到 03-design-<组件>.md（一个组件一份）')
         return report('check_design ' + base, errors, warns)
 
     modules = arch_modules(arch)
     if not modules:
-        warns.append('没有从 02-architecture.md 读到模块清单，无法核对覆盖')
+        warns.append('没有从 02-architecture.md 读到 5.3 组件定义，无法核对覆盖')
 
     seen = {}
     total_units = 0
     for path in files:
         mod = module_from_file(path)
         if mod is None:
-            warns.append('文件命名不符合 03-design-<模块>.md：%s' % os.path.basename(path))
+            warns.append('文件命名不符合 03-design-<组件>.md：%s' % os.path.basename(path))
+            continue
+        if mod == '':
+            warns.append('%s 是模板文件名（未写组件名），跳过组件归属核对' % os.path.basename(path))
+            total_units += check_one(path, errors, warns)
             continue
         if mod in seen:
-            errors.append('同一模块有多份详细设计：%s / %s'
+            errors.append('同一组件有多份详细设计：%s / %s'
                           % (os.path.basename(seen[mod]), os.path.basename(path)))
         seen[mod] = path
         total_units += check_one(path, errors, warns)
 
     for name in modules:
         if name not in seen:
-            errors.append('架构模块没有详细设计文件：03-design-%s.md' % name)
+            errors.append('架构组件没有详细设计文件：03-design-%s.md' % name)
     for name in sorted(set(seen) - set(modules)):
-        errors.append('详细设计有架构清单中没有的模块：%s' % name)
+        errors.append('详细设计有架构清单中没有的组件：%s' % name)
 
-    print('详细设计：模块 %d / %d ｜ 文件 %d ｜ 软件单元 %d'
+    print('详细设计：组件 %d / %d ｜ 文件 %d ｜ 软件单元 %d'
           % (len(set(modules) & set(seen)), len(modules), len(seen), total_units))
     return report('check_design ' + base, errors, warns)
 

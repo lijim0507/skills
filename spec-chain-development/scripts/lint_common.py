@@ -2,15 +2,20 @@
 """SDD 共享 lint 辅助：只做机械检查，不做语义判断。"""
 import re
 
-PLACEHOLDERS = ('待填', 'TODO', '<…>')
+PLACEHOLDER_LITERALS = ('待填', '<…>')
+PLACEHOLDER_PATTERNS = (re.compile(r'(?<![A-Za-z0-9_])TODO(?![A-Za-z0-9_])'),)
 
 
 def placeholder_issues(text):
     out = []
     for i, line in enumerate(text.splitlines(), 1):
-        for token in PLACEHOLDERS:
+        for token in PLACEHOLDER_LITERALS:
             if token in line:
                 out.append((i, '占位符 %s 未清理' % token))
+        for pat in PLACEHOLDER_PATTERNS:
+            if pat.search(line):
+                out.append((i, '占位符 TODO 未清理'))
+                break
     return out
 
 
@@ -29,13 +34,14 @@ def strip_number(title):
 def heading_order_warnings(text, order):
     heads = []
     for line in text.splitlines():
-        m = re.match(r'^##\s+(.+?)\s*$', line)
+        m = re.match(r'^#{1,2}\s+(.+?)\s*$', line)
         if not m:
             continue
         title = m.group(1).strip()
         plain = strip_number(title)
+        base = re.split(r'[/（(]', plain)[0].strip()
         for idx, name in enumerate(order):
-            if plain.startswith(name):
+            if base == name:
                 heads.append((idx, title))
                 break
     idxs = [i for i, _ in heads]

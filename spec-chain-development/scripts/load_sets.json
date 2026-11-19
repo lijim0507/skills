@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "note": "四阶段版装载集；max_bytes 为 UTF-8 字节总和，先按实测上浮，再用 check_loadsets 收紧。",
+  "note": "四阶段版装载集；模板整份装载（不裁剪），max_bytes 按实测上浮约 3%~6%，由 check_loadsets 守门。",
   "bootstrap": {
     "description": "入口：任何阶段都要付的底价，只含 SKILL.md。",
     "scope": "cumulative",
@@ -11,25 +11,25 @@
     "description": "建项目契约：模板一份。",
     "scope": "incremental",
     "files": ["templates/00-contract.md"],
-    "max_bytes": 4000
+    "max_bytes": 6500
   },
   "stage.01.requirements": {
     "description": "写 01：需求分析师角色卡 + 需求模板。",
     "scope": "incremental",
     "files": ["roles/01-requirement-analyst.md", "templates/01-requirements.md"],
-    "max_bytes": 12000
+    "max_bytes": 13500
   },
   "stage.02.architecture": {
     "description": "写 02：架构师角色卡 + 架构模板。",
     "scope": "incremental",
     "files": ["roles/02-architect.md", "templates/02-architecture.md"],
-    "max_bytes": 15000
+    "max_bytes": 28000
   },
   "stage.03.design": {
     "description": "写 03：详细设计师角色卡 + 详细设计模板。",
     "scope": "incremental",
     "files": ["roles/03-designer.md", "templates/03-design.md"],
-    "max_bytes": 14000
+    "max_bytes": 16000
   },
   "stage.04.implementation": {
     "description": "执行 04：实现者角色卡 + 执行记录模板。",

@@ -16,8 +16,11 @@ import lint_common
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
+SSR_ID = r'SSR\d{3,}'
 REQ_DEF = re.compile(r'^\s*\*\*\s*\[?(' + REQ_ID + r')\]?\s*(.*?)\s*\*\*\s*$')
 REQ_IN_TEXT = re.compile(r'\b(' + REQ_ID + r')\b')
+SSR_IN_TEXT = re.compile(r'\b(' + SSR_ID + r')\b')
+ANY_ID_IN_TEXT = re.compile(r'\b((?:' + REQ_ID + r')|(?:' + SSR_ID + r'))\b')
 
 
 def read_unfenced(path):
@@ -164,6 +167,53 @@ def parse_reqs(heads):
     return sec, blocks
 
 
+def section_lines(heads, sec):
+    """sec 的 body 加其所有子节 body（保留行号，供表格解析）。"""
+    body = list(sec['body'])
+    started = False
+    for h in heads:
+        if h is sec:
+            started = True
+            continue
+        if not started:
+            continue
+        if h['level'] <= sec['level']:
+            break
+        body.extend(h['body'])
+    return body
+
+
+def parse_ssr_cards(heads):
+    """解析 SWE.1 需求卡：| 需求 ID | SSR001 | 后接键值行。"""
+    sec = find_section(heads, '软件需求')
+    if sec is None:
+        return None, []
+    cards = []
+    cur = None
+    for lineno, t in section_lines(heads, sec):
+        if re.match(r'^#{1,6}\s+', t):
+            cur = None
+            continue
+        s = t.strip()
+        if not (s.startswith('|') and s.endswith('|')):
+            continue
+        cells = [c.strip() for c in s.strip('|').split('|')]
+        if not cells:
+            continue
+        key = norm(cells[0])
+        if key in ('需求ID', '需求编号') and len(cells) > 1 and re.fullmatch(SSR_ID, cells[1]):
+            cur = {'id': cells[1], 'line': lineno, 'fields': {}}
+            cards.append(cur)
+            continue
+        if cur is None:
+            continue
+        if all(re.match(r'^:?-{2,}:?$', c) for c in cells if c):
+            continue
+        val = ' '.join(c for c in cells[1:] if c).strip()
+        cur['fields'].setdefault(key, []).append(val)
+    return sec, cards
+
+
 def main():
     if len(sys.argv) < 2:
         print(__doc__.strip())
@@ -197,6 +247,7 @@ def main():
             warns.append('「简介」建议含「软件需求之间的依赖关系」表')
 
     sec, blocks = parse_reqs(heads)
+    ssr_sec, cards = parse_ssr_cards(heads)
     defs = {}
     for b in blocks:
         if b['id'] in defs:
@@ -217,8 +268,29 @@ def main():
             errors.append('%s 的验证准则没有子条目（至少一条「- …」）' % b['id'])
         if not re.search(r'\*\*依赖\*\*', text):
             warns.append('%s 缺少「**依赖**」（没有依赖写「无」）' % b['id'])
-    if sec is not None and not blocks:
-        errors.append('「软件需求」里没有 REQ 条目（格式：**[REQ-产品-域-001] 标题**）')
+
+    for c in cards:
+        if c['id'] in defs:
+            errors.append('需求编号重复：%s' % c['id'])
+            continue
+        defs[c['id']] = c
+        f = {k: ' '.join(v).strip() for k, v in c['fields'].items()}
+        if not f.get('需求描述'):
+            errors.append('%s 缺少「需求描述」或内容为空' % c['id'])
+        if not f.get('验证准则'):
+            errors.append('%s 缺少「验证准则」或内容为空' % c['id'])
+        if not f.get('验证方法'):
+            warns.append('%s 缺少「验证方法」（评审 / 测试 / 仿真 / 分析）' % c['id'])
+        if not f.get('需求类别'):
+            warns.append('%s 缺少「需求类别」（功能性 / 非功能性 / 接口 / 标题 / 信息）' % c['id'])
+        if not (f.get('来源人') or f.get('来源于') or f.get('来源')):
+            warns.append('%s 缺少「来源人/来源于」或「来源」（TSR ID + ASIL）' % c['id'])
+        if not f.get('需求状态'):
+            warns.append('%s 缺少「需求状态」' % c['id'])
+        if not f.get('需求分析'):
+            warns.append('%s 缺少「需求分析」（技术可行性 / 可验证性 / 成本进度 / 运行环境）' % c['id'])
+    if sec is not None and not blocks and not cards:
+        errors.append('「软件需求」里没有需求条目（支持 **REQ-…** 块或 | 需求 ID | SSR001 | 需求卡）')
 
     # 需求清单表：在「简介」节及其子节里找含 REQ 的表头
     if intro is not None:
@@ -236,22 +308,21 @@ def main():
         tables = all_tables(body)
         list_table = None
         for tb in tables:
-            if any('REQ' in c.upper() for c in tb['header']):
+            if any(('REQ' in c.upper() or '需求ID' in c or '需求 ID' in c) for c in tb['header']):
                 list_table = tb
                 break
-        if list_table is not None:
-            if not any('需求类别' in c for c in list_table['header']):
-                warns.append('「需求清单」表头建议含「需求类别」列')
-            if not any('来源' in c for c in list_table['header']):
-                warns.append('「需求清单」表头建议含「来源」列')
+        if list_table is None:
+            if cards:
+                warns.append('「简介」缺少需求清单表（软件需求ID / 描述 / 备注）')
+        else:
             idx = None
             for i, c in enumerate(list_table['header']):
-                if 'REQ' in c.upper():
+                if 'REQ' in c.upper() or '需求ID' in c or '需求 ID' in c:
                     idx = i
                     break
             for lineno, cells in list_table['rows']:
                 if idx is not None and idx < len(cells):
-                    for rid in REQ_IN_TEXT.findall(cells[idx]):
+                    for rid in ANY_ID_IN_TEXT.findall(cells[idx]):
                         if rid not in defs:
                             errors.append('第 %d 行：需求清单里的 %s 没有正文定义' % (lineno, rid))
 
@@ -264,7 +335,7 @@ def main():
                 warns.append('追溯分析里没有 %s（建议在「系统需求 → 软件需求」表补一行）' % rid)
 
     raw = open(path, encoding='utf-8').read()
-    for rid in sorted(set(REQ_IN_TEXT.findall(raw))):
+    for rid in sorted(set(ANY_ID_IN_TEXT.findall(raw))):
         if rid not in defs:
             errors.append('正文引用了不存在的 %s' % rid)
     for ln, msg in lint_common.placeholder_issues(raw):
@@ -274,7 +345,7 @@ def main():
     warns.extend(lint_common.heading_order_warnings(
         raw, ['概述', '软件需求', '追溯分析']))
 
-    print('REQ：%d' % len(blocks))
+    print('SSR/REQ：%d' % (len(blocks) + len(cards)))
     return report('check_requirements ' + path, errors, warns)
 
 

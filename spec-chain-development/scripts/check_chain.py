@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""追溯链检查：REQ（01）→ 模块 / 公开接口（02）→ 函数（03，一模块一份）→ 任务（04）。
+"""追溯链检查：SSR（01）→ 组件 / 公开接口（02）→ 函数（03，一个组件一份）→ 任务（04）。
 
-只查机械事实：每条 REQ 都有架构落点与任务落点、引用的编号存在、模块清单与详细设计文件一致。
+只查机械事实：每条 SSR / REQ 都有架构落点与任务落点、引用的编号存在、组件定义与详细设计文件一致。
 不检查覆盖是否“真”成立；那是人确认与验证阶段的事。
 
 用法: python check_chain.py <项目>/SDD
@@ -14,11 +14,12 @@ import re
 import sys
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
+SSR_ID = r'SSR\d{3,}'
 REQ_ID = r'REQ(?:-[A-Za-z0-9]+)+'
 REQ_DEF = re.compile(r'^\s*\*\*\s*\[?(' + REQ_ID + r')\]?\s*(.*?)\s*\*\*\s*$')
-REQ_IN_TEXT = re.compile(r'\b(' + REQ_ID + r')\b')
+ANY_ID = re.compile(r'\b(' + SSR_ID + r'|' + REQ_ID + r')\b')
 TASK_LINE = re.compile(r'^\s*[-*]\s+\[[ xX~]\]\s+(T\d{3})\b(.+)$')
-TASK_TAG = re.compile(r'(?:REQ(?:-[A-Za-z0-9]+)+|R-\d{2,3})')
+TASK_TAG = re.compile(r'(?:' + SSR_ID + r'|REQ(?:-[A-Za-z0-9]+)+|R-\d{2,3})')
 NON_MODULE = {'数据质量', '交接给实现', '修订记录'}
 
 
@@ -135,48 +136,48 @@ def parse_reqs(path):
         m = REQ_DEF.match(t)
         if m:
             defs[clean_cell(m.group(1))] = lineno
+        for rid in ANY_ID.findall(t):
+            defs.setdefault(rid, lineno)
     return defs
 
 
+def component_defs(heads):
+    """返回 [(heading, 名称)]，只认 5.3.4/5.3.5/5.3.6 下的组件定义。"""
+    arch = find_section(heads, '软件架构设计')
+    if arch is None:
+        return []
+    out = []
+    for h in heads[heads.index(arch) + 1:]:
+        if h['level'] <= arch['level']:
+            break
+        m = re.match(r'^5\.3\.[456]\.\d+\s+(.+)$', h['title'].strip())
+        if not m:
+            continue
+        name = clean_cell(re.split(r'定义|/|（', m.group(1))[0])
+        name = re.sub(r'^组件', '', name).strip()
+        if name:
+            out.append((h, name))
+    return out
+
+
 def arch_info(path):
-    """返回 (模块集合, 模块→覆盖 REQ 列表)。"""
+    """返回 (组件集合, 组件→覆盖需求列表)。"""
     modules, cover = set(), {}
     if not os.path.isfile(path):
         return modules, cover
     heads = sections(read_unfenced(path))
-    sec = find_section(heads, '模块清单')
-    if sec is not None:
-        rows = table_rows(sec['body'])
-        if rows:
-            idx = col_index(rows[0][1], '模块')
-            if idx is not None:
-                for _, cells in rows[1:]:
-                    if len(cells) > idx:
-                        name = clean_cell(cells[idx])
-                        if name and not (name.startswith('<') and name.endswith('>')):
-                            modules.add(name)
-    csec = find_section(heads, '模块契约')
-    if csec is not None:
-        start = heads.index(csec)
-        for h in heads[start + 1:]:
-            if h['level'] <= 2:
-                break
-            if h['level'] == 3:
-                # 层标题：应用层 / 中间层 / 驱动层
-                continue
-            if h['level'] != 4:
-                continue
-            name = clean_cell(strip_number(h['title']))
-            if not name or (name.startswith('<') and name.endswith('>')):
-                continue
-            text = '\n'.join(t for _, t in h['body'])
-            m = re.search(r'\*\*覆盖 REQ\*\*\s*[：:]\s*(.+)', text)
-            cover[name] = REQ_IN_TEXT.findall(m.group(1)) if m else []
+    for h, name in component_defs(heads):
+        if 'XXX' in name or 'xxx' in name:
+            continue
+        modules.add(name)
+        text = '\n'.join(t for _, t in h['body'])
+        m = re.search(r'覆盖需求\*{0,2}\s*[：:]\s*(.+)', text)
+        cover[name] = ANY_ID.findall(m.group(1)) if m else []
     return modules, cover
 
 
 def design_files(base):
-    """一个模块一份：03-design-<模块>.md，模块名从文件名取。"""
+    """一个组件一份：03-design-<组件>.md，组件名从文件名取。"""
     files = sorted(glob.glob(os.path.join(base, '03-design-*.md')))
     out = []
     for path in files:
@@ -215,11 +216,11 @@ def main():
     trefs = task_reqs(impl)
 
     if not reqs:
-        errors.append('没读到 01-requirements.md 的 REQ 定义')
+        errors.append('没读到 01-requirements.md 的需求定义（SSR/REQ）')
     if not modules:
-        errors.append('没读到 02-architecture.md 的模块清单')
+        errors.append('没读到 02-architecture.md 的 5.3 组件定义')
     if not dmods:
-        errors.append('没读到 03-design-<模块>.md（一个模块一份）')
+        errors.append('没读到 03-design-<组件>.md（一个组件一份）')
     if not trefs:
         errors.append('没读到 04-implementation.md 的任务行')
 
@@ -228,7 +229,7 @@ def main():
         for rid in rids:
             covered_by_arch.add(rid)
             if rid not in reqs:
-                errors.append('%s 的「覆盖 REQ」引用了不存在的 %s' % (name, rid))
+                errors.append('%s 的「覆盖需求」引用了不存在的 %s' % (name, rid))
 
     covered_by_task = set()
     for rid in trefs:
@@ -237,22 +238,20 @@ def main():
             errors.append('任务行引用了不存在的 %s' % rid)
 
     for rid in sorted(set(reqs) - covered_by_arch):
-        errors.append('%s 没有被任何架构模块覆盖（链条断了）' % rid)
+        errors.append('%s 没有被任何架构组件覆盖（链条断了）' % rid)
     for rid in sorted(set(reqs) - covered_by_task):
         errors.append('%s 没有被任何任务覆盖（链条断了）' % rid)
 
     for name in sorted(dnames - modules):
-        errors.append('详细设计有架构清单中没有的模块：%s' % name)
+        errors.append('详细设计有架构清单中没有的组件：%s' % name)
     for name in sorted(modules - dnames):
-        errors.append('架构模块没有详细设计文件：03-design-%s.md' % name)
-    for name in sorted(set(cover) - modules):
-        errors.append('模块契约里有模块清单中没有的模块：%s' % name)
+        errors.append('架构组件没有详细设计文件：03-design-%s.md' % name)
 
     for label, path in (('01', spec), ('02', arch), ('04', impl)):
         if not os.path.isfile(path):
             warns.append('找不到 %s 文档：%s' % (label, path))
 
-    print('链条：REQ %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
+    print('链条：需求 %d ｜ 被架构覆盖 %d ｜ 被任务覆盖 %d'
           % (len(reqs), len(set(reqs) & covered_by_arch), len(set(reqs) & covered_by_task)))
     return report('check_chain ' + base, errors, warns)
 

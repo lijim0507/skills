@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """执行编写检查（04-implementation.md）。
 
-只查机械事实：任务行格式与挂接、任务卡是否齐全、必填字段是否为空、覆盖映射表、
+只查机械事实：任务表 / 任务行格式与挂接、任务卡是否齐全、必填字段是否为空、覆盖映射表、
 文档头与章节顺序。任务拆得好不好、DoD 是否够硬由人确认前判断。
 
 用法: python check_implementation.py <项目>/SDD/04-implementation.md
@@ -14,9 +14,9 @@ import lint_common
 
 FENCE = re.compile(r'^\s*(?:\x60\x60\x60|~~~)')
 TASK_LINE = re.compile(r'^\s*[-*]\s+\[[ xX~]\]\s+(T\d{3})\b(.+)$')
-TASK_TAG = re.compile(r'(?:REQ(?:-[A-Za-z0-9]+)+|R-\d{2,3})')
+TASK_TAG = re.compile(r'(?:REQ(?:-[A-Za-z0-9]+)+|SSR\d+|R-\d{2,3})')
 FLOW_TAG = re.compile(r'\|\s*流程\s*$')
-CARD_HEAD = re.compile(r'^#{2,6}\s+(T\d{3})\s*$')
+CARD_HEAD = re.compile(r'^#{2,6}\s+(T\d{3})\b')
 CARD_FIELDS = ['归属', '批次', '执行者', '验收人', '目标', '范围', '输入', '产出',
                '完成判据', '验收判据', '验证', '证据', '依赖']
 CARD_REQUIRED = {'归属', '目标', '范围', '输入', '产出', '完成判据',
@@ -110,11 +110,20 @@ def clean_cell(s):
 
 
 def card_fields(body):
+    """收集卡内字段：粗体列表（旧写法）与两列表格（模板）都支持。"""
     fields = {}
     for _, text in body:
         m = re.match(r'^\s*[-*]?\s*\*\*([^*]+)\*\*\s*[：:]\s*(.*)$', text)
         if m:
             fields[norm(m.group(1))] = m.group(2).strip()
+    known = {norm(n) for n in CARD_FIELDS}
+    known |= {norm(n) for n in ('类型', '覆盖需求', '可并行', '规模', '风险 / 回滚')}
+    for _, cells in table_rows(body):
+        if len(cells) < 2:
+            continue
+        name = norm(clean_cell(cells[0]))
+        if (name in known or any(name.startswith(k) for k in known)) and name not in fields:
+            fields[name] = cells[1].strip()
     return fields
 
 
@@ -126,6 +135,35 @@ def field_value(fields, name):
         if k.startswith(name):
             return v
     return None
+
+
+def table_tasks(heads):
+    """从「任务」章节的表格提取任务；返回 {任务号: (行号, 覆盖需求单元格)}。"""
+    sec = find_section(heads, '任务')
+    if sec is None:
+        return {}
+    rows = table_rows(sec['body'])
+    if not rows:
+        return {}
+    header = rows[0][1]
+    data = rows
+    first = clean_cell(header[0]) if header else ''
+    if not re.fullmatch(r'T\d{3}', first):
+        data = rows[1:]
+    idx_req = col_index(header, '覆盖需求')
+    if idx_req is None:
+        idx_req = col_index(header, '需求')
+    out = {}
+    for lineno, cells in data:
+        tid = clean_cell(cells[0]) if cells else ''
+        if not re.fullmatch(r'T\d{3}', tid):
+            continue
+        if idx_req is not None and idx_req < len(cells):
+            tag_text = cells[idx_req]
+        else:
+            tag_text = ' '.join(cells[1:])
+        out[tid] = (lineno, tag_text)
+    return out
 
 
 def main():
@@ -144,7 +182,7 @@ def main():
         if find_section(heads, name) is None:
             warns.append('建议补上章节：' + name)
 
-    # 任务行
+    # 任务：列表写法（旧文档 / 示例）与表格写法（模板）
     tasks = {}
     for lineno, text in pairs:
         m = TASK_LINE.match(text)
@@ -156,9 +194,16 @@ def main():
             errors.append('任务编号重复：%s' % tid)
         tasks[tid] = lineno
         if not TASK_TAG.search(rest) and not FLOW_TAG.search(text):
-            errors.append('第 %d 行 %s 没有挂 REQ（或 R-xx、| 流程）' % (lineno, tid))
+            errors.append('第 %d 行 %s 没有挂软件需求 ID（SSR…）或 R-xx、流程' % (lineno, tid))
+    for tid, (lineno, tag_text) in table_tasks(heads).items():
+        if tid in tasks:
+            errors.append('任务编号重复：%s' % tid)
+            continue
+        tasks[tid] = lineno
+        if not TASK_TAG.search(tag_text) and '流程' not in norm(tag_text):
+            errors.append('第 %d 行 %s 没有挂软件需求 ID（SSR…）或 R-xx、流程' % (lineno, tid))
     if not tasks:
-        errors.append('「任务」里没有任务行（格式：- [ ] T001 [B1] 标题 | REQ-…）')
+        errors.append('「任务」里没有任务表或任务行（表格列：任务｜批次｜类型｜归属｜覆盖需求｜状态；或 - [ ] T001 [B1] 标题 | SSR001）')
 
     # 任务卡
     cards = {}
@@ -188,7 +233,7 @@ def main():
     for tid in sorted(set(tasks) - set(cards)):
         errors.append('任务 %s 没有任务卡' % tid)
     for tid in sorted(set(cards) - set(tasks)):
-        warns.append('任务卡 %s 没有对应任务行' % tid)
+        warns.append('任务卡 %s 没有对应任务表 / 任务行' % tid)
 
     # 覆盖映射
     cm = find_section(heads, '覆盖映射')
@@ -199,10 +244,13 @@ def main():
         else:
             idx_task = col_index(rows[0][1], '任务')
             idx_req = col_index(rows[0][1], 'REQ')
+            for kw in ('软件需求', 'SSR'):
+                if idx_req is None:
+                    idx_req = col_index(rows[0][1], kw)
             if idx_task is None:
                 errors.append('「覆盖映射」表头缺少「任务」列')
             if idx_req is None:
-                errors.append('「覆盖映射」表头缺少「REQ」列')
+                errors.append('「覆盖映射」表头缺少「软件需求 ID / 异常」列')
 
     raw = open(path, encoding='utf-8').read()
     for ln, msg in lint_common.placeholder_issues(raw):
