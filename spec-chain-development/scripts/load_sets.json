@@ -23,7 +23,7 @@
     "description": "写 02：架构师角色卡 + 架构模板。",
     "scope": "incremental",
     "files": ["roles/02-architect.md", "templates/02-architecture.md"],
-    "max_bytes": 28000
+    "max_bytes": 29000
   },
   "stage.03.design": {
     "description": "写 03：详细设计师角色卡 + 详细设计模板。",
